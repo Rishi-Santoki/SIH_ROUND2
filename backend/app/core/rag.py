@@ -37,3 +37,38 @@ def retrieve_relevant_chunks(
     except Exception as e:
         print(f"RAG retrieval error: {e}")
         return []
+
+def retrieve_curriculum_content(client: Client, skill_id: str) -> List[Dict[str, Any]]:
+    """
+    Module 1: Curriculum Knowledge Retrieval
+    Fetches curated curriculum chunks directly for a specific skill_id without semantic search.
+    """
+    try:
+        # Get the knowledge document for this skill curriculum
+        docs_res = client.table("knowledge_documents") \
+            .select("document_id") \
+            .eq("document_type", "skill_curriculum") \
+            .execute()
+            
+        doc_ids = [d["document_id"] for d in docs_res.data]
+        if not doc_ids:
+            return []
+            
+        # Get chunks that match the skill_id in metadata
+        chunks_res = client.table("document_chunks") \
+            .select("chunk_id, content, metadata") \
+            .in_("document_id", doc_ids) \
+            .execute()
+            
+        # Filter chunks by skill_id
+        # Supabase Python client jsonb filtering can be tricky, so we filter locally
+        # or we could use `.contains("metadata", {"skill_id": skill_id})`
+        relevant_chunks = [
+            c for c in chunks_res.data 
+            if c.get("metadata", {}).get("skill_id") == skill_id
+        ]
+        
+        return relevant_chunks
+    except Exception as e:
+        print(f"Curriculum retrieval error: {e}")
+        return []

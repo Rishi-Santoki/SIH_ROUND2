@@ -1,11 +1,13 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from typing import List, Optional
-from app.dependencies import get_current_super_admin, log_admin_action
+from pydantic import BaseModel
+from app.dependencies import get_current_super_admin, log_admin_action, get_admin_or_institution_admin
 from app.models.super_admin_schemas import (
     RejectVerification, SuspendUser, RoleChange, SkillCreate, SkillUpdate,
     SkillMerge, ForceDeactivateAssessment, LearningProgramCreate, LearningProgramUpdate,
     ModerateOpportunity, ComplaintStatusUpdate, PlatformSettingUpdate,
-    CareerRoleCreate, CareerRoleUpdate, RoleSkillCreate, RoleSkillUpdate
+    CareerRoleCreate, CareerRoleUpdate, RoleSkillCreate, RoleSkillUpdate,
+    SkillTopicWeightUpdate
 )
 import datetime
 
@@ -66,9 +68,27 @@ def get_growth(admin: dict = Depends(get_current_super_admin)):
 # --- MODULE 2: Verification Queues ---
 
 @router.get("/verifications")
-def list_verifications(entity_type: str, admin: dict = Depends(get_current_super_admin)):
+def list_verifications(entity_type: str, admin: dict = Depends(get_admin_or_institution_admin)):
+    if admin["role"] != "super_admin" and entity_type != "alumni":
+        raise HTTPException(status_code=403, detail="Institution admins can only view alumni verifications")
+        
     client = admin["client"]
     # Join with entity data based on entity_type
+    
+    if admin["role"] == "institution":
+        # Need to join to verify the alumni is in the same institution
+        # Since verification_requests just has entity_id, we can fetch all pending and filter in Python
+        # or just query alumni_profiles. Let's do it in python for simplicity since pending queue is small
+        res = client.table("verification_requests").select("*").eq("entity_type", "alumni").eq("status", "pending").execute()
+        reqs = res.data
+        if not reqs:
+            return []
+            
+        alumni_ids = [r["entity_id"] for r in reqs]
+        prof_res = client.table("alumni_profiles").select("alumni_id").in_("alumni_id", alumni_ids).eq("institution_id", admin["institution_id"]).execute()
+        valid_ids = {p["alumni_id"] for p in prof_res.data}
+        return [r for r in reqs if r["entity_id"] in valid_ids]
+    
     res = client.table("verification_requests").select("*").eq("entity_type", entity_type).eq("status", "pending").execute()
     
     # If it's a certification, attempt to resolve the signed URL for the credential_url if it's a raw path
@@ -94,7 +114,7 @@ def list_verifications(entity_type: str, admin: dict = Depends(get_current_super
     return res.data
 
 @router.patch("/verifications/{request_id}/approve")
-def approve_verification(request_id: str, admin: dict = Depends(get_current_super_admin)):
+def approve_verification(request_id: str, admin: dict = Depends(get_admin_or_institution_admin)):
     client = admin["client"]
     
     res = client.table("verification_requests").select("*").eq("request_id", request_id).execute()
@@ -105,6 +125,17 @@ def approve_verification(request_id: str, admin: dict = Depends(get_current_supe
     if req["status"] != "pending":
         raise HTTPException(status_code=400, detail="Request already processed")
         
+    entity_type = req["entity_type"]
+    entity_id = req["entity_id"]
+    
+    if admin["role"] != "super_admin":
+        if entity_type != "alumni":
+            raise HTTPException(status_code=403, detail="Institution admins can only approve alumni verifications")
+        # Verify institution match
+        prof = client.table("alumni_profiles").select("institution_id").eq("alumni_id", entity_id).execute()
+        if not prof.data or prof.data[0]["institution_id"] != admin["institution_id"]:
+            raise HTTPException(status_code=403, detail="Cannot verify alumni from another institution")
+        
     # Update request
     client.table("verification_requests").update({
         "status": "approved",
@@ -113,8 +144,6 @@ def approve_verification(request_id: str, admin: dict = Depends(get_current_supe
     }).eq("request_id", request_id).execute()
     
     # Propagate to entity
-    entity_type = req["entity_type"]
-    entity_id = req["entity_id"]
     
     if entity_type == "institution":
         client.table("institutions").update({"verification_status": "verified"}).eq("institution_id", entity_id).execute()
@@ -124,6 +153,8 @@ def approve_verification(request_id: str, admin: dict = Depends(get_current_supe
         client.table("projects").update({"verification_status": "verified"}).eq("project_id", entity_id).execute()
     elif entity_type == "certification":
         client.table("certifications").update({"verification_status": "verified"}).eq("certification_id", entity_id).execute()
+    elif entity_type == "alumni":
+        client.table("alumni_profiles").update({"is_verified": True}).eq("alumni_id", entity_id).execute()
         
     # Log
     log_admin_action(client, admin["user_id"], "verification_approved", entity_type, entity_id, {"request_id": request_id})
@@ -139,7 +170,7 @@ def approve_verification(request_id: str, admin: dict = Depends(get_current_supe
     return {"message": "Approved"}
 
 @router.patch("/verifications/{request_id}/reject")
-def reject_verification(request_id: str, data: RejectVerification, admin: dict = Depends(get_current_super_admin)):
+def reject_verification(request_id: str, data: RejectVerification, admin: dict = Depends(get_admin_or_institution_admin)):
     client = admin["client"]
     
     res = client.table("verification_requests").select("*").eq("request_id", request_id).execute()
@@ -148,6 +179,14 @@ def reject_verification(request_id: str, data: RejectVerification, admin: dict =
         
     req = res.data[0]
     
+    if admin["role"] != "super_admin":
+        if req["entity_type"] != "alumni":
+            raise HTTPException(status_code=403, detail="Institution admins can only reject alumni verifications")
+        # Verify institution match
+        prof = client.table("alumni_profiles").select("institution_id").eq("alumni_id", req["entity_id"]).execute()
+        if not prof.data or prof.data[0]["institution_id"] != admin["institution_id"]:
+            raise HTTPException(status_code=403, detail="Cannot reject alumni from another institution")
+            
     client.table("verification_requests").update({
         "status": "rejected",
         "notes": data.notes,
@@ -362,6 +401,31 @@ def merge_skill(skill_id: str, data: SkillMerge, admin: dict = Depends(get_curre
     })
     
     return {"message": "Skill merged successfully", "details": res.data}
+
+@router.post("/skills/{skill_id}/topics")
+def set_skill_topic_weight(skill_id: str, data: SkillTopicWeightUpdate, admin: dict = Depends(get_current_super_admin)):
+    client = admin["client"]
+    
+    # Ensure child skill exists and has parent_skill_id set to this skill_id
+    child_res = client.table("skills").select("parent_skill_id").eq("skill_id", data.child_skill_id).execute()
+    if not child_res.data:
+        raise HTTPException(status_code=404, detail="Child skill not found")
+        
+    if child_res.data[0].get("parent_skill_id") != skill_id:
+        # Automatically update parent_skill_id
+        client.table("skills").update({"parent_skill_id": skill_id}).eq("skill_id", data.child_skill_id).execute()
+    
+    # Upsert the weight
+    res = client.table("skill_topic_weights").upsert({
+        "parent_skill_id": skill_id,
+        "child_skill_id": data.child_skill_id,
+        "weight": data.weight,
+        "is_mandatory": data.is_mandatory
+    }).execute()
+    
+    log_admin_action(client, admin["user_id"], "skill_topic_weight_set", "skill", skill_id, data.dict())
+    return {"message": "Skill topic weight set successfully"}
+
 
 @router.get("/career-roles")
 def list_career_roles(admin: dict = Depends(get_current_super_admin)):

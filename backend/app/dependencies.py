@@ -106,6 +106,19 @@ def get_current_academician(user: dict = Depends(get_authenticated_user)) -> dic
     
     return user
 
+def get_current_alumni(user: dict = Depends(get_authenticated_user)) -> dict:
+    if user["role"] != "alumni":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized as alumni")
+        
+    client = user["client"]
+    response = client.table("alumni_profiles").select("institution_id, is_verified").eq("alumni_id", user["user_id"]).execute()
+    
+    ap = response.data
+    user["institution_id"] = ap[0].get("institution_id") if ap else None
+    user["is_verified"] = ap[0].get("is_verified") if ap else False
+    
+    return user
+
 def get_current_institution_admin(user: dict = Depends(get_authenticated_user)) -> dict:
     if user["role"] != "institution":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized as institution admin")
@@ -131,6 +144,17 @@ def get_current_super_admin(user: dict = Depends(get_authenticated_user)) -> dic
     if user["role"] != "super_admin":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized as super admin")
     return user
+
+def get_admin_or_institution_admin(user: dict = Depends(get_authenticated_user)) -> dict:
+    if user["role"] == "super_admin":
+        return user
+    if user["role"] == "institution":
+        client = user["client"]
+        response = client.table("institution_admins").select("institution_id").eq("admin_id", user["user_id"]).execute()
+        ia = response.data
+        user["institution_id"] = ia[0].get("institution_id") if ia else None
+        return user
+    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized. Must be super admin or institution admin.")
 
 def log_admin_action(client: Client, actor_id: str, action: str, entity_type: str, entity_id: str = None, metadata: dict = None):
     client.table("audit_logs").insert({

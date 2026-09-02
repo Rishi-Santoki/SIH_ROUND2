@@ -4,7 +4,7 @@ CREATE TABLE users (
   user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   full_name VARCHAR,
   email VARCHAR UNIQUE,
-  role VARCHAR CHECK (role IN ('student', 'industry', 'academician', 'institution', 'super_admin')),
+  role VARCHAR CHECK (role IN ('student', 'industry', 'academician', 'institution', 'super_admin', 'alumni')),
   profile_image TEXT,
   is_active BOOLEAN DEFAULT true,
   created_at TIMESTAMP DEFAULT now(),
@@ -155,6 +155,7 @@ CREATE TABLE assessments (
 CREATE TABLE assessment_questions (
   question_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   assessment_id UUID REFERENCES assessments(assessment_id) ON DELETE CASCADE,
+  skill_id UUID REFERENCES skills(skill_id) ON DELETE SET NULL,
   question TEXT,
   question_type VARCHAR,
   options JSONB,
@@ -482,3 +483,255 @@ CREATE POLICY "Super Admins full access weight_adjustment_proposals"
 INSERT INTO platform_settings (setting_key, setting_value) 
 VALUES ('weights_version', '1')
 ON CONFLICT (setting_key) DO NOTHING;
+-- Migration: Alumni Profile, Verification & Institution-Scoped Directory
+
+-- Update the role enum
+ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;
+ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('student', 'industry', 'academician', 'institution', 'super_admin', 'alumni'));
+
+CREATE TABLE alumni_profiles (
+    alumni_id UUID PRIMARY KEY REFERENCES users(user_id) ON DELETE CASCADE,
+    institution_id UUID NOT NULL REFERENCES institutions(institution_id) ON DELETE CASCADE,
+    graduation_year INTEGER NOT NULL,
+    degree VARCHAR,
+    department VARCHAR,
+    current_profession VARCHAR,
+    current_company VARCHAR,
+    current_designation VARCHAR,
+    previous_experience TEXT,
+    expertise TEXT,
+    bio TEXT,
+    linkedin_url TEXT,
+    profile_image TEXT,
+    is_verified BOOLEAN DEFAULT false,
+    created_at TIMESTAMP DEFAULT now(),
+    updated_at TIMESTAMP DEFAULT now()
+);
+
+CREATE TABLE alumni_skills (
+    alumni_skill_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    alumni_id UUID REFERENCES alumni_profiles(alumni_id) ON DELETE CASCADE,
+    skill_id UUID REFERENCES skills(skill_id) ON DELETE CASCADE,
+    proficiency_level INTEGER,
+    created_at TIMESTAMP DEFAULT now(),
+    updated_at TIMESTAMP DEFAULT now(),
+    UNIQUE(alumni_id, skill_id)
+);
+
+-- RLS
+ALTER TABLE alumni_profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE alumni_skills ENABLE ROW LEVEL SECURITY;
+
+-- alumni_profiles policies
+CREATE POLICY "Alumni can manage their own profile"
+    ON alumni_profiles
+    FOR ALL
+    USING (auth.uid() = alumni_id)
+    WITH CHECK (auth.uid() = alumni_id);
+
+-- Protect institution_id, role, is_verified from being updated by owner
+-- We do this via a trigger to strictly enforce it
+CREATE OR REPLACE FUNCTION protect_alumni_profile_fields()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.institution_id IS DISTINCT FROM OLD.institution_id THEN
+        RAISE EXCEPTION 'Cannot update institution_id';
+    END IF;
+    IF NEW.is_verified IS DISTINCT FROM OLD.is_verified THEN
+        RAISE EXCEPTION 'Cannot update is_verified status';
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER tr_protect_alumni_profile_fields
+    BEFORE UPDATE ON alumni_profiles
+    FOR EACH ROW
+    EXECUTE FUNCTION protect_alumni_profile_fields();
+
+-- Students and Academicians can view verified alumni from their own institution
+CREATE POLICY "Institution scoped alumni visibility"
+    ON alumni_profiles
+    FOR SELECT
+    USING (
+        is_verified = true 
+        AND 
+        institution_id = (
+            SELECT COALESCE(
+                (SELECT institution_id FROM student_profiles WHERE student_id = auth.uid()),
+                (SELECT institution_id FROM academician_profiles WHERE academician_id = auth.uid())
+            )
+        )
+    );
+
+-- alumni_skills policies
+CREATE POLICY "Alumni can manage their own skills"
+    ON alumni_skills
+    FOR ALL
+    USING (auth.uid() = alumni_id)
+    WITH CHECK (auth.uid() = alumni_id);
+
+CREATE POLICY "Institution scoped alumni skills visibility"
+    ON alumni_skills
+    FOR SELECT
+    USING (
+        EXISTS (
+            SELECT 1 FROM alumni_profiles p
+            WHERE p.alumni_id = alumni_skills.alumni_id
+            AND p.is_verified = true
+            AND p.institution_id = (
+                SELECT COALESCE(
+                    (SELECT institution_id FROM student_profiles WHERE student_id = auth.uid()),
+                    (SELECT institution_id FROM academician_profiles WHERE academician_id = auth.uid())
+                )
+            )
+        )
+    );
+-- Migration: Alumni Community Messaging
+
+CREATE TABLE conversations (
+    conversation_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    created_at TIMESTAMP DEFAULT now(),
+    updated_at TIMESTAMP DEFAULT now(),
+    last_message_at TIMESTAMP,
+    is_active BOOLEAN DEFAULT true
+);
+
+CREATE TABLE conversation_participants (
+    participant_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    conversation_id UUID REFERENCES conversations(conversation_id) ON DELETE CASCADE,
+    user_id UUID REFERENCES users(user_id) ON DELETE CASCADE,
+    joined_at TIMESTAMP DEFAULT now(),
+    last_read_at TIMESTAMP,
+    UNIQUE(conversation_id, user_id)
+);
+
+CREATE TABLE messages (
+    message_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    conversation_id UUID REFERENCES conversations(conversation_id) ON DELETE CASCADE,
+    sender_id UUID REFERENCES users(user_id),
+    message TEXT NOT NULL,
+    reply_to_id UUID REFERENCES messages(message_id),
+    is_edited BOOLEAN DEFAULT false,
+    is_deleted BOOLEAN DEFAULT false,
+    created_at TIMESTAMP DEFAULT now(),
+    updated_at TIMESTAMP DEFAULT now()
+);
+
+CREATE INDEX idx_messages_conversation_created ON messages(conversation_id, created_at);
+CREATE INDEX idx_messages_sender_created ON messages(sender_id, created_at);
+
+-- RLS
+ALTER TABLE conversations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE conversation_participants ENABLE ROW LEVEL SECURITY;
+ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
+
+-- Conversations RLS
+CREATE POLICY "Users can view their conversations"
+    ON conversations
+    FOR SELECT
+    USING (
+        EXISTS (
+            SELECT 1 FROM conversation_participants cp
+            WHERE cp.conversation_id = conversations.conversation_id
+            AND cp.user_id = auth.uid()
+        )
+    );
+
+-- Conversation Participants RLS (SELECT only, NO INSERT/UPDATE for clients)
+CREATE POLICY "Users can view participants of their conversations"
+    ON conversation_participants
+    FOR SELECT
+    USING (
+        EXISTS (
+            SELECT 1 FROM conversation_participants cp
+            WHERE cp.conversation_id = conversation_participants.conversation_id
+            AND cp.user_id = auth.uid()
+        )
+    );
+
+-- Messages RLS
+CREATE POLICY "Users can view messages in their conversations"
+    ON messages
+    FOR SELECT
+    USING (
+        EXISTS (
+            SELECT 1 FROM conversation_participants cp
+            WHERE cp.conversation_id = messages.conversation_id
+            AND cp.user_id = auth.uid()
+        )
+    );
+
+CREATE POLICY "Users can insert messages to their conversations"
+    ON messages
+    FOR INSERT
+    WITH CHECK (
+        sender_id = auth.uid()
+        AND
+        EXISTS (
+            SELECT 1 FROM conversation_participants cp
+            WHERE cp.conversation_id = messages.conversation_id
+            AND cp.user_id = auth.uid()
+        )
+    );
+
+CREATE POLICY "Users can edit their own messages"
+    ON messages
+    FOR UPDATE
+    USING (sender_id = auth.uid())
+    WITH CHECK (sender_id = auth.uid());
+
+CREATE POLICY "Users can delete their own messages"
+    ON messages
+    FOR DELETE
+    USING (sender_id = auth.uid());
+
+-- Realtime Publication
+-- Create publication if it doesn't exist, though supabase_realtime normally exists.
+-- Supabase specifically handles real-time via `supabase_realtime` publication.
+DO $$ 
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication WHERE pubname = 'supabase_realtime'
+  ) THEN
+    CREATE PUBLICATION supabase_realtime;
+  END IF;
+END $$;
+
+ALTER PUBLICATION supabase_realtime ADD TABLE messages;
+ALTER PUBLICATION supabase_realtime ADD TABLE conversation_participants;
+-- Migration: Skill Roadmaps
+CREATE TABLE skill_roadmaps (
+    roadmap_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    student_id UUID REFERENCES users(user_id) ON DELETE CASCADE,
+    skill_id UUID REFERENCES skills(skill_id) ON DELETE CASCADE,
+    roadmap_json JSONB NOT NULL,
+    generated_at TIMESTAMP DEFAULT now(),
+    based_on_proficiency_level INTEGER NOT NULL,
+    UNIQUE(student_id, skill_id)
+);
+
+ALTER TABLE skill_roadmaps ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Students can view their own roadmaps"
+    ON skill_roadmaps
+    FOR SELECT
+    USING (student_id = auth.uid());
+
+-- Service layer will handle inserts/updates securely
+-- Migration: Alumni Mentorship Signal
+ALTER TABLE alumni_skills
+ADD COLUMN willing_to_mentor BOOLEAN DEFAULT false,
+ADD COLUMN found_challenging BOOLEAN DEFAULT false;
+
+-- Migration 28: Subtopic Skill Decomposition
+
+CREATE TABLE skill_topic_weights (
+  parent_skill_id UUID REFERENCES skills(skill_id) ON DELETE CASCADE,
+  child_skill_id UUID REFERENCES skills(skill_id) ON DELETE CASCADE,
+  weight DECIMAL DEFAULT 1.0,
+  is_mandatory BOOLEAN DEFAULT false,
+  PRIMARY KEY (parent_skill_id, child_skill_id)
+);
+
+CREATE INDEX idx_skill_topic_weights_parent ON skill_topic_weights(parent_skill_id);

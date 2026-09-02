@@ -32,6 +32,7 @@ class AssessmentOut(BaseModel):
     created_at: datetime
     
 class AssessmentQuestionCreate(BaseModel):
+    skill_id: str
     question: str
     question_type: str = Field(pattern="^(mcq|true_false|short_answer)$")
     options: Optional[Dict[str, Any]] = None
@@ -40,6 +41,7 @@ class AssessmentQuestionCreate(BaseModel):
     difficulty: str = Field(pattern="^(easy|medium|hard)$")
 
 class AssessmentQuestionUpdate(BaseModel):
+    skill_id: Optional[str] = None
     question: Optional[str] = None
     question_type: Optional[str] = Field(None, pattern="^(mcq|true_false|short_answer)$")
     options: Optional[Dict[str, Any]] = None

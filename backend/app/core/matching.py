@@ -1,10 +1,7 @@
 from supabase import Client
+from app.services.skill_rollup import get_skill_proficiency
 
 def get_skill_gaps(client: Client, student_id: str, target_career_id: str):
-    # Fetch student skills
-    student_skills_resp = client.table("student_skills").select("skill_id, proficiency_level").eq("student_id", student_id).execute()
-    student_skills_map = {s["skill_id"]: s["proficiency_level"] for s in student_skills_resp.data}
-    
     # Fetch role skills
     role_skills_resp = client.table("role_skills").select("skill_id, required_level, is_mandatory, importance_weight, skills(name)").eq("career_role_id", target_career_id).execute()
     
@@ -12,7 +9,10 @@ def get_skill_gaps(client: Client, student_id: str, target_career_id: str):
     for rs in role_skills_resp.data:
         skill_id = rs["skill_id"]
         req_level = rs["required_level"]
-        cur_level = student_skills_map.get(skill_id, 0)
+        
+        prof_data = get_skill_proficiency(client, student_id, skill_id)
+        cur_level = prof_data["proficiency_level"]
+        
         gap_val = max(0, req_level - cur_level)
         
         status = "met"
@@ -27,7 +27,9 @@ def get_skill_gaps(client: Client, student_id: str, target_career_id: str):
             "gap": gap_val,
             "is_mandatory": rs["is_mandatory"],
             "importance_weight": rs["importance_weight"],
-            "status": status
+            "status": status,
+            "coverage": prof_data["coverage"],
+            "untested_children": prof_data["untested_children"]
         })
         
     # Sort by importance DESC, gap DESC
@@ -86,10 +88,6 @@ def calculate_match_score(client: Client, student_id: str, opportunity_id: str, 
     
     # Fetch opportunity skills
     opp_skills = client.table("opportunity_skills").select("skill_id, required_level, is_mandatory, skills(name)").eq("opportunity_id", opportunity_id).execute().data
-    # Fetch student skills
-    student_skills = client.table("student_skills").select("skill_id, proficiency_level, confidence_score").eq("student_id", student_id).execute().data
-    
-    ss_map = {s["skill_id"]: s for s in student_skills}
     
     skill_comp = 0
     matched = []
@@ -104,13 +102,15 @@ def calculate_match_score(client: Client, student_id: str, opportunity_id: str, 
             req = os["required_level"]
             sid = os["skill_id"]
             sname = os["skills"]["name"]
-            st = ss_map.get(sid)
-            if not st:
+            
+            prof_data = get_skill_proficiency(client, student_id, sid)
+            cur = prof_data["proficiency_level"]
+            
+            if cur == 0:
                 missing.append(sname)
                 if os["is_mandatory"]: mandatory_missing = True
                 continue
                 
-            cur = st["proficiency_level"]
             if cur >= req:
                 score_sum += 1.0
                 matched.append(sname)
@@ -122,7 +122,8 @@ def calculate_match_score(client: Client, student_id: str, opportunity_id: str, 
             skill_comp *= 0.5 # penalty
             
     # Assessments (dummy calculation based on average confidence)
-    avg_conf = sum(s["confidence_score"] for s in student_skills) / len(student_skills) if student_skills else 0
+    student_skills = client.table("student_skills").select("confidence_score").eq("student_id", student_id).execute().data
+    avg_conf = sum(s["confidence_score"] for s in student_skills if s.get("confidence_score")) / len(student_skills) if student_skills else 0
     assessment_evidence = avg_conf * (weights.get("assessments", 0.20) * 100)
     
     # Projects

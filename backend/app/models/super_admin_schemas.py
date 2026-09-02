@@ -107,3 +107,8 @@ class ComplaintStatusUpdate(BaseModel):
 # System Settings
 class PlatformSettingUpdate(BaseModel):
     setting_value: Any
+
+class SkillTopicWeightUpdate(BaseModel):
+    child_skill_id: str
+    weight: float = 1.0
+    is_mandatory: bool = False

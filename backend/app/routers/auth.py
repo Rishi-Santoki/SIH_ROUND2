@@ -24,6 +24,9 @@ def get_onboarding_status(user: dict = Depends(get_authenticated_user)):
     elif role == "institution":
         res = client.table("institution_admins").select("admin_id").eq("admin_id", user_id).execute()
         profile_complete = len(res.data) > 0
+    elif role == "alumni":
+        res = client.table("alumni_profiles").select("alumni_id").eq("alumni_id", user_id).execute()
+        profile_complete = len(res.data) > 0
     elif role == "super_admin":
         profile_complete = True # Super admins don't have a separate profile to onboard
         
@@ -66,6 +69,8 @@ def get_me(user: dict = Depends(get_authenticated_user)):
             dashboard_route = "/onboarding/academician"
         elif role == "institution":
             dashboard_route = "/onboarding/institution"
+        elif role == "alumni":
+            dashboard_route = "/onboarding/alumni"
     else:
         if role == "student":
             dashboard_route = "/student/dashboard"
@@ -75,6 +80,8 @@ def get_me(user: dict = Depends(get_authenticated_user)):
             dashboard_route = "/academician/dashboard"
         elif role == "institution":
             dashboard_route = "/institution/dashboard"
+        elif role == "alumni":
+            dashboard_route = "/alumni/dashboard"
         elif role == "super_admin":
             dashboard_route = "/admin/dashboard"
 

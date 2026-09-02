@@ -4,6 +4,7 @@ from datetime import datetime
 from app.dependencies import get_db_client, get_current_student
 from app.core.matching import get_skill_gaps, calculate_readiness_percentage
 from app.routers.gaps import _get_target_role
+from app.routers.student_roadmap import generate_skill_roadmap
 
 router = APIRouter(prefix="/student", tags=["Readiness & Roadmap"])
 
@@ -56,19 +57,51 @@ def get_roadmap(student: dict = Depends(get_current_student), client: Client = D
     gaps = get_skill_gaps(client, student["user_id"], target_role_id)
     readiness = calculate_readiness_percentage(gaps)
     
-    # Next milestone: single highest-importance unmet gap
+    # Sort gaps by importance descending, mandatory first
+    sorted_gaps = sorted(
+        gaps, 
+        key=lambda x: (x.get("is_mandatory", False), x.get("importance_weight", 0)), 
+        reverse=True
+    )
+    
+    already_have = []
+    path = []
+    
     next_milestone = "Ready for applications"
-    for g in gaps:
-        if g["status"] in ["missing", "partial"]:
-            next_milestone = f"Improve {g['skill_name']}"
-            break
-            
-    # For a real implementation, we would call the internal functions for learning plan and opps here
+    
+    for g in sorted_gaps:
+        if g["status"] == "mastered":
+            already_have.append(g["skill_name"])
+        elif g["status"] in ["missing", "partial"]:
+            if next_milestone == "Ready for applications":
+                next_milestone = f"Improve {g['skill_name']}"
+                
+            # Invoke Module 3 logic internally for this skill
+            try:
+                roadmap = generate_skill_roadmap(
+                    skill_id=g["skill_id"],
+                    target_role_id=target_role_id,
+                    client=client,
+                    student=student
+                )
+                if roadmap.get("status") != "already_mastered":
+                    # Attach the skill context to each step
+                    skill_path = roadmap.get("path", [])
+                    for step in skill_path:
+                        step["target_skill"] = g["skill_name"]
+                    path.extend(skill_path)
+            except Exception as e:
+                print(f"Skipping roadmap for {g['skill_name']} due to error: {e}")
+                pass
+                
+    # Renumber the merged path sequentially
+    for i, step in enumerate(path):
+        step["step_number"] = i + 1
+
     return {
         "target_role": target_role_name,
         "current_state": {"readiness": readiness},
-        "gaps": gaps,
-        "learning_plan": [], # populated by calling learning router logic
-        "matched_opportunities": [], # populated by calling matching router logic
+        "already_have": already_have,
+        "path": path,
         "next_milestone": next_milestone
     }

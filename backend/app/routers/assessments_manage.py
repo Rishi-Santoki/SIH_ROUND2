@@ -61,13 +61,14 @@ def activate_assessment(assessment_id: str, staff: dict = Depends(get_current_as
     client = staff["client"]
     
     # Validate questions exist and marks sum matches total_marks
-    asm_res = client.table("assessments").select("total_marks").eq("assessment_id", assessment_id).execute()
+    asm_res = client.table("assessments").select("total_marks, skill_id").eq("assessment_id", assessment_id).execute()
     if not asm_res.data:
         raise HTTPException(status_code=404, detail="Assessment not found")
         
     total_marks = asm_res.data[0]["total_marks"]
+    main_skill_id = asm_res.data[0]["skill_id"]
     
-    q_res = client.table("assessment_questions").select("marks").eq("assessment_id", assessment_id).execute()
+    q_res = client.table("assessment_questions").select("marks, skill_id").eq("assessment_id", assessment_id).execute()
     if not q_res.data:
         raise HTTPException(status_code=400, detail="Cannot activate assessment with zero questions.")
         
@@ -76,13 +77,59 @@ def activate_assessment(assessment_id: str, staff: dict = Depends(get_current_as
         raise HTTPException(status_code=400, detail=f"Cannot activate: Sum of question marks ({sum_marks}) does not match assessment total_marks ({total_marks}).")
         
     client.table("assessments").update({"is_active": True}).eq("assessment_id", assessment_id).execute()
-    return {"message": "Assessment activated"}
+    
+    # Check for coverage warnings
+    warning = None
+    if main_skill_id:
+        topic_res = client.table("skill_topic_weights").select("child_skill_id").eq("parent_skill_id", main_skill_id).execute()
+        if topic_res.data:
+            expected_topics = set(t["child_skill_id"] for t in topic_res.data)
+            actual_topics = set(q["skill_id"] for q in q_res.data if q["skill_id"])
+            missing = expected_topics - actual_topics
+            if missing:
+                warning = f"Warning: Assessment activated, but {len(missing)} sub-topics have zero questions."
+    
+    resp = {"message": "Assessment activated"}
+    if warning:
+        resp["warning"] = warning
+    return resp
 
 @router.patch("/{assessment_id}/deactivate")
 def deactivate_assessment(assessment_id: str, staff: dict = Depends(get_current_assessment_staff)):
     client = staff["client"]
     client.table("assessments").update({"is_active": False}).eq("assessment_id", assessment_id).execute()
     return {"message": "Assessment deactivated"}
+
+@router.get("/{assessment_id}/coverage-preview")
+def preview_coverage(assessment_id: str, staff: dict = Depends(get_current_assessment_staff)):
+    client = staff["client"]
+    asm_res = client.table("assessments").select("skill_id").eq("assessment_id", assessment_id).execute()
+    if not asm_res.data:
+        raise HTTPException(status_code=404, detail="Assessment not found")
+        
+    main_skill_id = asm_res.data[0]["skill_id"]
+    if not main_skill_id:
+        return {"topics": [], "message": "Assessment has no main skill assigned."}
+        
+    topic_res = client.table("skill_topic_weights").select("child_skill_id, skills!child_skill_id(name)").eq("parent_skill_id", main_skill_id).execute()
+    q_res = client.table("assessment_questions").select("skill_id").eq("assessment_id", assessment_id).execute()
+    
+    question_counts = {}
+    for q in q_res.data:
+        sid = q["skill_id"]
+        if sid:
+            question_counts[sid] = question_counts.get(sid, 0) + 1
+            
+    coverage = []
+    for t in topic_res.data:
+        cid = t["child_skill_id"]
+        coverage.append({
+            "skill_id": cid,
+            "name": t["skills"]["name"],
+            "question_count": question_counts.get(cid, 0)
+        })
+        
+    return {"topics": coverage}
 
 @router.get("")
 def list_assessments(staff: dict = Depends(get_current_assessment_staff)):
@@ -114,8 +161,20 @@ def add_question(assessment_id: str, data: AssessmentQuestionCreate, staff: dict
     client = staff["client"]
     check_active_lock(client, assessment_id)
     
+    asm_res = client.table("assessments").select("skill_id").eq("assessment_id", assessment_id).execute()
+    if not asm_res.data:
+        raise HTTPException(status_code=404, detail="Assessment not found")
+        
+    main_skill_id = asm_res.data[0]["skill_id"]
+    if main_skill_id and data.skill_id != main_skill_id:
+        # Check if it's a valid subtopic
+        topic_res = client.table("skill_topic_weights").select("child_skill_id").eq("parent_skill_id", main_skill_id).eq("child_skill_id", data.skill_id).execute()
+        if not topic_res.data:
+            raise HTTPException(status_code=400, detail="Provided skill_id is not a valid subtopic of the assessment's skill.")
+            
     res = client.table("assessment_questions").insert({
         "assessment_id": assessment_id,
+        "skill_id": data.skill_id,
         "question": data.question,
         "question_type": data.question_type,
         "options": data.options,

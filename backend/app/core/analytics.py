@@ -35,19 +35,31 @@ def get_industry_demand(client: Client, months_window: int = None, skill_map: di
         })
     return industry_demand
 
+from app.services.skill_rollup import get_skill_proficiency
+
 def get_student_readiness(client: Client, student_ids: List[str], skill_map: dict = None) -> List[dict]:
     readiness_aggregates = defaultdict(list)
     if student_ids:
-        student_skills_res = client.table("student_skills").select("skill_id, proficiency_level").in_("student_id", student_ids).execute()
+        # Identify which skills each student has engaged with
+        student_skills_res = client.table("student_skills").select("skill_id, student_id").in_("student_id", student_ids).execute()
+        
+        student_skill_map = defaultdict(set)
         for ss in student_skills_res.data:
-            readiness_aggregates[ss["skill_id"]].append(ss["proficiency_level"])
+            student_skill_map[ss["student_id"]].add(ss["skill_id"])
+            
+        # Calculate true dynamic proficiency
+        for student_id, s_ids in student_skill_map.items():
+            for skill_id in s_ids:
+                prof_data = get_skill_proficiency(client, student_id, skill_id)
+                readiness_aggregates[skill_id].append(prof_data["proficiency_level"])
             
     student_readiness = []
     for skill_id, profs in readiness_aggregates.items():
         avg_prof = sum(profs) / len(profs)
-        if avg_prof >= 3.5:
+        # Using 0-100 scale
+        if avg_prof >= 75.0:
             level = "HIGH"
-        elif avg_prof >= 2.0:
+        elif avg_prof >= 40.0:
             level = "MODERATE"
         else:
             level = "LOW"

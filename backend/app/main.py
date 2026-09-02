@@ -53,6 +53,13 @@ from app.routers import admin_knowledge
 from app.routers import admin_matching
 from app.routers import seed_outcomes
 from app.routers import platform
+from app.routers import student_alumni
+from app.routers import academician_alumni
+from app.routers.alumni import profile as alumni_profile
+from app.routers.alumni import skills as alumni_skills
+from app.routers.alumni import verification as alumni_verification
+from app.routers import community_messaging
+from app.routers import student_roadmap
 app = FastAPI(
     title="Academia-Industry Collaboration Portal - API",
     description="Backend Phase 1-6 API (Student, Industry, Academician, Institution)",
@@ -88,6 +95,13 @@ app.include_router(portfolio.router)
 app.include_router(notifications.router)
 app.include_router(copilot.router)
 app.include_router(student_assessments.router)
+app.include_router(student_alumni.router)
+app.include_router(student_roadmap.router)
+
+# Alumni modules
+app.include_router(alumni_profile.router)
+app.include_router(alumni_skills.router)
+app.include_router(alumni_verification.router)
 
 # Industry modules
 app.include_router(industry_company.router)
@@ -106,6 +120,7 @@ app.include_router(academician_collaborations.router)
 app.include_router(academician_skill_pulse.router)
 app.include_router(academician_notifications.router)
 app.include_router(academician_copilot.router)
+app.include_router(academician_alumni.router)
 
 # Institution modules
 app.include_router(institution_profile.router)
@@ -125,6 +140,7 @@ app.include_router(super_admin.router)
 
 # Shared modules
 app.include_router(complaints.router)
+app.include_router(community_messaging.router)
 
 @app.get("/health")
 def health_check():
