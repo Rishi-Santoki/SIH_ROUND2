@@ -1,0 +1,850 @@
+[
+  {
+    "method": "POST",
+    "path": "/files/upload"
+  },
+  {
+    "method": "GET",
+    "path": "/files/signed-url"
+  },
+  {
+    "method": "DELETE",
+    "path": "/files"
+  },
+  {
+    "method": "GET",
+    "path": "/auth/onboarding-status"
+  },
+  {
+    "method": "DELETE",
+    "path": "/auth/me/sessions"
+  },
+  {
+    "method": "GET",
+    "path": "/auth/career-roles"
+  },
+  {
+    "method": "GET",
+    "path": "/auth/me"
+  },
+  {
+    "method": "PATCH",
+    "path": "/auth/me"
+  },
+  {
+    "method": "GET",
+    "path": "/auth/institutions"
+  },
+  {
+    "method": "GET",
+    "path": "/auth/companies"
+  },
+  {
+    "method": "GET",
+    "path": "/admin/knowledge-base/documents"
+  },
+  {
+    "method": "POST",
+    "path": "/admin/knowledge-base/documents"
+  },
+  {
+    "method": "POST",
+    "path": "/admin/knowledge-base/documents/text"
+  },
+  {
+    "method": "DELETE",
+    "path": "/admin/knowledge-base/documents/{document_id}"
+  },
+  {
+    "method": "POST",
+    "path": "/admin/knowledge-base/documents/{document_id}/embed"
+  },
+  {
+    "method": "POST",
+    "path": "/admin/knowledge-base/seed"
+  },
+  {
+    "method": "GET",
+    "path": "/admin/knowledge-base/test-query"
+  },
+  {
+    "method": "POST",
+    "path": "/admin/matching/run-outcome-analysis"
+  },
+  {
+    "method": "GET",
+    "path": "/admin/matching/weight-proposals"
+  },
+  {
+    "method": "PATCH",
+    "path": "/admin/matching/weight-proposals/{proposal_id}/approve"
+  },
+  {
+    "method": "PATCH",
+    "path": "/admin/matching/weight-proposals/{proposal_id}/reject"
+  },
+  {
+    "method": "POST",
+    "path": "/admin/matching/seed-outcomes"
+  },
+  {
+    "method": "GET",
+    "path": "/platform/matching-methodology"
+  },
+  {
+    "method": "GET",
+    "path": "/student/profile"
+  },
+  {
+    "method": "PATCH",
+    "path": "/student/profile"
+  },
+  {
+    "method": "POST",
+    "path": "/student/profile/onboarding"
+  },
+  {
+    "method": "GET",
+    "path": "/student/profile/target-role"
+  },
+  {
+    "method": "PUT",
+    "path": "/student/profile/target-role"
+  },
+  {
+    "method": "GET",
+    "path": "/student/skills"
+  },
+  {
+    "method": "POST",
+    "path": "/student/skills"
+  },
+  {
+    "method": "GET",
+    "path": "/student/skills/dna/{skill_id}"
+  },
+  {
+    "method": "GET",
+    "path": "/student/skill-gap"
+  },
+  {
+    "method": "GET",
+    "path": "/student/skill-gap/summary"
+  },
+  {
+    "method": "GET",
+    "path": "/student/career-digital-twin"
+  },
+  {
+    "method": "GET",
+    "path": "/student/career-roadmap"
+  },
+  {
+    "method": "GET",
+    "path": "/student/learning-progress/recommendations"
+  },
+  {
+    "method": "POST",
+    "path": "/student/learning-progress"
+  },
+  {
+    "method": "GET",
+    "path": "/student/learning-progress"
+  },
+  {
+    "method": "PATCH",
+    "path": "/student/learning-progress/{progress_id}"
+  },
+  {
+    "method": "GET",
+    "path": "/student/opportunities/recommended"
+  },
+  {
+    "method": "GET",
+    "path": "/student/applications"
+  },
+  {
+    "method": "POST",
+    "path": "/student/applications"
+  },
+  {
+    "method": "GET",
+    "path": "/student/applications/{application_id}"
+  },
+  {
+    "method": "GET",
+    "path": "/student/portfolio/projects"
+  },
+  {
+    "method": "POST",
+    "path": "/student/portfolio/projects"
+  },
+  {
+    "method": "GET",
+    "path": "/student/portfolio/certifications"
+  },
+  {
+    "method": "POST",
+    "path": "/student/portfolio/certifications"
+  },
+  {
+    "method": "GET",
+    "path": "/student/notifications"
+  },
+  {
+    "method": "PATCH",
+    "path": "/student/notifications/{notification_id}/read"
+  },
+  {
+    "method": "POST",
+    "path": "/student/copilot"
+  },
+  {
+    "method": "GET",
+    "path": "/student/copilot/history"
+  },
+  {
+    "method": "GET",
+    "path": "/student/assessments/available"
+  },
+  {
+    "method": "POST",
+    "path": "/student/assessments/{assessment_id}/start"
+  },
+  {
+    "method": "GET",
+    "path": "/student/assessments/{assessment_id}/questions"
+  },
+  {
+    "method": "POST",
+    "path": "/student/assessments/{assessment_id}/submit"
+  },
+  {
+    "method": "GET",
+    "path": "/student/assessments/results"
+  },
+  {
+    "method": "GET",
+    "path": "/student/assessments/{assessment_id}/results/{result_id}"
+  },
+  {
+    "method": "GET",
+    "path": "/student/alumni/recommended"
+  },
+  {
+    "method": "GET",
+    "path": "/student/alumni"
+  },
+  {
+    "method": "GET",
+    "path": "/student/alumni/{alumni_id}"
+  },
+  {
+    "method": "POST",
+    "path": "/student/skills/{skill_id}/roadmap"
+  },
+  {
+    "method": "GET",
+    "path": "/student/skills/{skill_id}/roadmap"
+  },
+  {
+    "method": "POST",
+    "path": "/alumni/profile/onboarding"
+  },
+  {
+    "method": "GET",
+    "path": "/alumni/profile"
+  },
+  {
+    "method": "PATCH",
+    "path": "/alumni/profile"
+  },
+  {
+    "method": "GET",
+    "path": "/alumni/skills"
+  },
+  {
+    "method": "POST",
+    "path": "/alumni/skills"
+  },
+  {
+    "method": "DELETE",
+    "path": "/alumni/skills/{skill_id}"
+  },
+  {
+    "method": "PATCH",
+    "path": "/alumni/skills/{skill_id}/mentorship"
+  },
+  {
+    "method": "GET",
+    "path": "/alumni/verification"
+  },
+  {
+    "method": "POST",
+    "path": "/alumni/verification"
+  },
+  {
+    "method": "GET",
+    "path": "/industry/company"
+  },
+  {
+    "method": "PATCH",
+    "path": "/industry/company"
+  },
+  {
+    "method": "POST",
+    "path": "/industry/company/verify"
+  },
+  {
+    "method": "POST",
+    "path": "/industry/company/recruiters/invite"
+  },
+  {
+    "method": "GET",
+    "path": "/industry/profile"
+  },
+  {
+    "method": "PATCH",
+    "path": "/industry/profile"
+  },
+  {
+    "method": "POST",
+    "path": "/industry/profile/onboarding"
+  },
+  {
+    "method": "GET",
+    "path": "/industry/opportunities"
+  },
+  {
+    "method": "POST",
+    "path": "/industry/opportunities"
+  },
+  {
+    "method": "POST",
+    "path": "/industry/opportunities/{opportunity_id}/skills"
+  },
+  {
+    "method": "PATCH",
+    "path": "/industry/opportunities/{opportunity_id}/publish"
+  },
+  {
+    "method": "PATCH",
+    "path": "/industry/opportunities/{opportunity_id}/close"
+  },
+  {
+    "method": "PATCH",
+    "path": "/industry/opportunities/{opportunity_id}"
+  },
+  {
+    "method": "GET",
+    "path": "/industry/opportunities/{opportunity_id}"
+  },
+  {
+    "method": "GET",
+    "path": "/industry/opportunities/{opportunity_id}/candidates"
+  },
+  {
+    "method": "GET",
+    "path": "/industry/candidates/search"
+  },
+  {
+    "method": "GET",
+    "path": "/industry/applications"
+  },
+  {
+    "method": "GET",
+    "path": "/industry/applications/{application_id}/candidate"
+  },
+  {
+    "method": "PATCH",
+    "path": "/industry/applications/{application_id}/status"
+  },
+  {
+    "method": "GET",
+    "path": "/industry/pipeline"
+  },
+  {
+    "method": "GET",
+    "path": "/industry/pipeline/{opportunity_id}"
+  },
+  {
+    "method": "POST",
+    "path": "/industry/interns/{application_id}/milestones"
+  },
+  {
+    "method": "PATCH",
+    "path": "/industry/interns/{application_id}/milestones/{tracking_id}"
+  },
+  {
+    "method": "GET",
+    "path": "/industry/interns"
+  },
+  {
+    "method": "GET",
+    "path": "/industry/notifications"
+  },
+  {
+    "method": "PATCH",
+    "path": "/industry/notifications/{notification_id}/read"
+  },
+  {
+    "method": "POST",
+    "path": "/industry/copilot/ask"
+  },
+  {
+    "method": "GET",
+    "path": "/industry/copilot/history"
+  },
+  {
+    "method": "GET",
+    "path": "/academician/profile"
+  },
+  {
+    "method": "PATCH",
+    "path": "/academician/profile"
+  },
+  {
+    "method": "POST",
+    "path": "/academician/profile/onboarding"
+  },
+  {
+    "method": "PUT",
+    "path": "/academician/expertise"
+  },
+  {
+    "method": "GET",
+    "path": "/academician/collaborations/available"
+  },
+  {
+    "method": "GET",
+    "path": "/academician/collaborations/recommended"
+  },
+  {
+    "method": "GET",
+    "path": "/academician/collaborations/{collaboration_id}"
+  },
+  {
+    "method": "PATCH",
+    "path": "/academician/collaborations/{collaboration_id}"
+  },
+  {
+    "method": "POST",
+    "path": "/academician/collaborations/{collaboration_id}/apply"
+  },
+  {
+    "method": "POST",
+    "path": "/academician/collaborations"
+  },
+  {
+    "method": "GET",
+    "path": "/academician/collaborations/mine"
+  },
+  {
+    "method": "PATCH",
+    "path": "/academician/collaborations/{collaboration_id}/status"
+  },
+  {
+    "method": "GET",
+    "path": "/academician/applications"
+  },
+  {
+    "method": "GET",
+    "path": "/academician/collaborations/history"
+  },
+  {
+    "method": "GET",
+    "path": "/academician/skill-pulse"
+  },
+  {
+    "method": "GET",
+    "path": "/academician/notifications"
+  },
+  {
+    "method": "PATCH",
+    "path": "/academician/notifications/{notification_id}/read"
+  },
+  {
+    "method": "POST",
+    "path": "/academician/copilot/ask"
+  },
+  {
+    "method": "GET",
+    "path": "/academician/copilot/history"
+  },
+  {
+    "method": "GET",
+    "path": "/academician/alumni"
+  },
+  {
+    "method": "GET",
+    "path": "/academician/alumni/{alumni_id}"
+  },
+  {
+    "method": "GET",
+    "path": "/institution/profile"
+  },
+  {
+    "method": "PATCH",
+    "path": "/institution/profile"
+  },
+  {
+    "method": "POST",
+    "path": "/institution/verify"
+  },
+  {
+    "method": "POST",
+    "path": "/institution/admins/invite"
+  },
+  {
+    "method": "POST",
+    "path": "/institution/profile/onboarding"
+  },
+  {
+    "method": "GET",
+    "path": "/institution/students"
+  },
+  {
+    "method": "GET",
+    "path": "/institution/students/at-risk"
+  },
+  {
+    "method": "GET",
+    "path": "/institution/students/{student_id}"
+  },
+  {
+    "method": "GET",
+    "path": "/institution/analytics/skill-gaps"
+  },
+  {
+    "method": "GET",
+    "path": "/institution/analytics/assessments"
+  },
+  {
+    "method": "GET",
+    "path": "/institution/analytics/placements"
+  },
+  {
+    "method": "GET",
+    "path": "/institution/analytics/department-comparison"
+  },
+  {
+    "method": "GET",
+    "path": "/institution/industry-connections"
+  },
+  {
+    "method": "GET",
+    "path": "/institution/skill-demand-trends"
+  },
+  {
+    "method": "GET",
+    "path": "/institution/interventions/recommended"
+  },
+  {
+    "method": "POST",
+    "path": "/institution/interventions/{recommendation_id}/act"
+  },
+  {
+    "method": "GET",
+    "path": "/institution/interventions/history"
+  },
+  {
+    "method": "GET",
+    "path": "/institution/reports/summary"
+  },
+  {
+    "method": "GET",
+    "path": "/institution/notifications"
+  },
+  {
+    "method": "PATCH",
+    "path": "/institution/notifications/{notification_id}/read"
+  },
+  {
+    "method": "POST",
+    "path": "/institution/copilot/ask"
+  },
+  {
+    "method": "GET",
+    "path": "/institution/copilot/history"
+  },
+  {
+    "method": "GET",
+    "path": "/assessments/manage"
+  },
+  {
+    "method": "POST",
+    "path": "/assessments/manage"
+  },
+  {
+    "method": "PATCH",
+    "path": "/assessments/manage/{assessment_id}"
+  },
+  {
+    "method": "DELETE",
+    "path": "/assessments/manage/{assessment_id}"
+  },
+  {
+    "method": "PATCH",
+    "path": "/assessments/manage/{assessment_id}/activate"
+  },
+  {
+    "method": "PATCH",
+    "path": "/assessments/manage/{assessment_id}/deactivate"
+  },
+  {
+    "method": "GET",
+    "path": "/assessments/manage/{assessment_id}/coverage-preview"
+  },
+  {
+    "method": "POST",
+    "path": "/assessments/manage/{assessment_id}/questions"
+  },
+  {
+    "method": "GET",
+    "path": "/assessments/manage/{assessment_id}/questions"
+  },
+  {
+    "method": "PATCH",
+    "path": "/assessments/manage/{assessment_id}/questions/{question_id}"
+  },
+  {
+    "method": "DELETE",
+    "path": "/assessments/manage/{assessment_id}/questions/{question_id}"
+  },
+  {
+    "method": "GET",
+    "path": "/assessments/manage/{assessment_id}/results/{result_id}/pending-review"
+  },
+  {
+    "method": "PATCH",
+    "path": "/assessments/manage/{assessment_id}/results/{result_id}/grade"
+  },
+  {
+    "method": "GET",
+    "path": "/assessments/manage/{assessment_id}/analytics"
+  },
+  {
+    "method": "GET",
+    "path": "/admin/overview"
+  },
+  {
+    "method": "GET",
+    "path": "/admin/overview/growth"
+  },
+  {
+    "method": "GET",
+    "path": "/admin/verifications"
+  },
+  {
+    "method": "PATCH",
+    "path": "/admin/verifications/{request_id}/approve"
+  },
+  {
+    "method": "PATCH",
+    "path": "/admin/verifications/{request_id}/reject"
+  },
+  {
+    "method": "GET",
+    "path": "/admin/users"
+  },
+  {
+    "method": "GET",
+    "path": "/admin/users/{user_id}"
+  },
+  {
+    "method": "PATCH",
+    "path": "/admin/users/{user_id}/suspend"
+  },
+  {
+    "method": "PATCH",
+    "path": "/admin/users/{user_id}/reactivate"
+  },
+  {
+    "method": "POST",
+    "path": "/admin/institutions/{institution_id}/suspend"
+  },
+  {
+    "method": "DELETE",
+    "path": "/admin/institutions/{institution_id}"
+  },
+  {
+    "method": "GET",
+    "path": "/admin/roles/pending-assignment"
+  },
+  {
+    "method": "PATCH",
+    "path": "/admin/users/{user_id}/role"
+  },
+  {
+    "method": "POST",
+    "path": "/admin/users/{user_id}/grant-super-admin"
+  },
+  {
+    "method": "POST",
+    "path": "/admin/users/{user_id}/revoke-super-admin"
+  },
+  {
+    "method": "GET",
+    "path": "/admin/skills"
+  },
+  {
+    "method": "POST",
+    "path": "/admin/skills"
+  },
+  {
+    "method": "PATCH",
+    "path": "/admin/skills/{skill_id}"
+  },
+  {
+    "method": "POST",
+    "path": "/admin/skills/{skill_id}/merge"
+  },
+  {
+    "method": "POST",
+    "path": "/admin/skills/{skill_id}/topics"
+  },
+  {
+    "method": "GET",
+    "path": "/admin/career-roles"
+  },
+  {
+    "method": "POST",
+    "path": "/admin/career-roles"
+  },
+  {
+    "method": "PATCH",
+    "path": "/admin/career-roles/{career_role_id}"
+  },
+  {
+    "method": "DELETE",
+    "path": "/admin/career-roles/{career_role_id}"
+  },
+  {
+    "method": "GET",
+    "path": "/admin/career-roles/{career_role_id}/skills"
+  },
+  {
+    "method": "POST",
+    "path": "/admin/career-roles/{career_role_id}/skills"
+  },
+  {
+    "method": "PATCH",
+    "path": "/admin/career-roles/{career_role_id}/skills/{role_skill_id}"
+  },
+  {
+    "method": "DELETE",
+    "path": "/admin/career-roles/{career_role_id}/skills/{role_skill_id}"
+  },
+  {
+    "method": "POST",
+    "path": "/admin/seed-reference-data"
+  },
+  {
+    "method": "GET",
+    "path": "/admin/assessments"
+  },
+  {
+    "method": "PATCH",
+    "path": "/admin/assessments/{assessment_id}/force-deactivate"
+  },
+  {
+    "method": "GET",
+    "path": "/admin/assessments/flagged"
+  },
+  {
+    "method": "GET",
+    "path": "/admin/learning-programs"
+  },
+  {
+    "method": "POST",
+    "path": "/admin/learning-programs"
+  },
+  {
+    "method": "PATCH",
+    "path": "/admin/learning-programs/{program_id}"
+  },
+  {
+    "method": "DELETE",
+    "path": "/admin/learning-programs/{program_id}"
+  },
+  {
+    "method": "GET",
+    "path": "/admin/opportunities/flagged"
+  },
+  {
+    "method": "PATCH",
+    "path": "/admin/opportunities/{opportunity_id}/moderate"
+  },
+  {
+    "method": "GET",
+    "path": "/admin/complaints"
+  },
+  {
+    "method": "GET",
+    "path": "/admin/complaints/{complaint_id}"
+  },
+  {
+    "method": "PATCH",
+    "path": "/admin/complaints/{complaint_id}/status"
+  },
+  {
+    "method": "GET",
+    "path": "/admin/settings"
+  },
+  {
+    "method": "PATCH",
+    "path": "/admin/settings/{setting_key}"
+  },
+  {
+    "method": "GET",
+    "path": "/admin/audit-logs"
+  },
+  {
+    "method": "GET",
+    "path": "/admin/notifications"
+  },
+  {
+    "method": "PATCH",
+    "path": "/admin/notifications/{notification_id}/read"
+  },
+  {
+    "method": "POST",
+    "path": "/complaints"
+  },
+  {
+    "method": "GET",
+    "path": "/complaints/my"
+  },
+  {
+    "method": "GET",
+    "path": "/community/conversations"
+  },
+  {
+    "method": "POST",
+    "path": "/community/conversations"
+  },
+  {
+    "method": "GET",
+    "path": "/community/conversations/{conversation_id}/messages"
+  },
+  {
+    "method": "POST",
+    "path": "/community/conversations/{conversation_id}/messages"
+  },
+  {
+    "method": "PATCH",
+    "path": "/community/messages/{message_id}"
+  },
+  {
+    "method": "DELETE",
+    "path": "/community/messages/{message_id}"
+  },
+  {
+    "method": "PATCH",
+    "path": "/community/conversations/{conversation_id}/read"
+  },
+  {
+    "method": "GET",
+    "path": "/health"
+  }
+]

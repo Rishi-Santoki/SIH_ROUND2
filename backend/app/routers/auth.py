@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from supabase import Client
-from app.dependencies import get_authenticated_user, get_db_client
+from app.dependencies import get_authenticated_user, get_db_client, get_service_client
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
@@ -49,7 +49,7 @@ def revoke_sessions(auth=Depends(get_authenticated_user)):
 def list_active_career_roles():
     """Generic endpoint for dropdowns to list active career roles."""
     client = get_service_client()
-    res = client.table("career_roles").select("career_role_id, title, category, description").eq("is_active", True).execute()
+    res = client.table("career_roles").select("career_role_id, title, category, description").execute()
     return res.data
 
 @router.get("/me")

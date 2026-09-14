@@ -1,4 +1,4 @@
-from pydantic import BaseModel, HttpUrl, EmailStr
+from pydantic import BaseModel, HttpUrl, EmailStr, UUID4
 from typing import Optional, List
 from datetime import date
 

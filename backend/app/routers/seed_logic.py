@@ -128,30 +128,21 @@ def run_seed_reference_data(client):
         ("Network Security Fundamentals", "course", "Network Security", 3, True)
     ]
     
-    # We need a provider institution ID for learning programs, let's just pick one or create a dummy
-    res = client.table("users").select("user_id").eq("role", "institution").execute()
-    if not res.data:
-        # Create a dummy institution
-        res = client.table("users").insert({
-            "email": "dummy_inst@example.com",
-            "role": "institution",
-            "full_name": "Dummy Institution",
-            "is_active": True
-        }).execute()
-    inst_id = res.data[0]["user_id"]
+    # We need a provider institution ID for learning programs
+    inst_res = client.table("institutions").select("institution_id").limit(1).execute()
+    provider_inst_id = inst_res.data[0]["institution_id"] if inst_res.data else None
     
     for title, ptype, target_skill, level, is_free in programs:
         res = client.table("learning_programs").select("program_id").eq("title", title).execute()
         if not res.data:
             res = client.table("learning_programs").insert({
                 "title": title,
-                "provider_id": inst_id,
-                "type": ptype,
+                "provider_id": provider_inst_id,
+                "program_type": ptype,
                 "is_free": is_free,
-                "duration_weeks": 4,
+                "duration": "4 weeks",
                 "mode": "online",
                 "description": f"Learn {target_skill}",
-                "status": "active"
             }).execute()
         prog_id = res.data[0]["program_id"]
         
@@ -163,52 +154,11 @@ def run_seed_reference_data(client):
                 client.table("program_skills").insert({
                     "program_id": prog_id,
                     "skill_id": s_id,
-                    "target_proficiency_level": level
+                    "skill_level_after_completion": level
                 }).execute()
                 
-    # 5. Seed Test Student (student_A)
-    # student_A might exist. Check users table
-    res = client.table("users").select("user_id").eq("email", "student_a@test.com").execute()
-    if not res.data:
-        res = client.table("users").insert({
-            "email": "student_a@test.com",
-            "role": "student",
-            "full_name": "Student A",
-            "is_active": True
-        }).execute()
-    student_id = res.data[0]["user_id"]
-    
-    # Ensure profile exists and target role is ML Engineer
-    res = client.table("student_profiles").select("*").eq("student_id", student_id).execute()
-    if not res.data:
-        client.table("student_profiles").insert({
-            "student_id": student_id,
-            "target_career_id": ml_role_id
-        }).execute()
-    else:
-        client.table("student_profiles").update({"target_career_id": ml_role_id}).eq("student_id", student_id).execute()
-        
-    # Seed skills for student_A
-    student_skills_seed = [
-        ("Python", 85),
-        ("Machine Learning", 70),
-        ("SQL", 55),
-        ("Deep Learning", 30),
-        ("MLOps", 15)
-    ]
-    for skill_name, prof in student_skills_seed:
-        s_id = skill_map[skill_name]
-        res = client.table("student_skills").select("*").eq("student_id", student_id).eq("skill_id", s_id).execute()
-        if not res.data:
-            client.table("student_skills").insert({
-                "student_id": student_id,
-                "skill_id": s_id,
-                "proficiency_level": prof,
-                "confidence_score": 0.9,
-                "verification_status": "verified",
-                "source": "assessment"
-            }).execute()
-        else:
-            client.table("student_skills").update({"proficiency_level": prof}).eq("student_id", student_id).eq("skill_id", s_id).execute()
+    # NOTE: Test student creation removed — use seed_complete.py which
+    # creates users properly via auth.admin.create_user() (required because
+    # users.user_id is a FK to auth.users).
             
     return {"message": "Reference data seeded successfully."}

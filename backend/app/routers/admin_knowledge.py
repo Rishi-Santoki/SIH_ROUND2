@@ -5,7 +5,6 @@ import re
 from app.dependencies import get_current_super_admin, get_service_client
 from app.models.super_admin_schemas import KnowledgeDocumentCreateText
 from app.core.embeddings import get_embedding
-from app.services.storage_service import StorageService
 
 router = APIRouter(prefix="/admin/knowledge-base", tags=["Knowledge Base Ingestion"])
 
