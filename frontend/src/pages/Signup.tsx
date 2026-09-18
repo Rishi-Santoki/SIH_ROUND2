@@ -43,7 +43,7 @@ export function Signup() {
         options: {
           data: {
             full_name: name,
-            role: selectedRole
+            role: selectedRole.toLowerCase()
           }
         }
       });

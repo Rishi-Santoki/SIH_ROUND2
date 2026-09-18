@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Filter, History, Download, Calendar, User, ShieldAlert } from 'lucide-react';
+import { Search, Filter, History, Download, Calendar, User, ShieldAlert, Check } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
 const MOCK_LOGS = [
@@ -13,12 +13,49 @@ const MOCK_LOGS = [
 export function AdminAuditLog() {
   const [logs] = useState(MOCK_LOGS);
   const [searchQuery, setSearchQuery] = useState('');
+  const [exportSuccess, setExportSuccess] = useState(false);
 
   const filteredLogs = logs.filter(l => 
-    l.user.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    l.action.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    l.details.toLowerCase().includes(searchQuery.toLowerCase())
+    (l.user || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
+    (l.action || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (l.details || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const handleExportCsv = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    try {
+      const response = await fetch('/admin/audit-logs?format=csv');
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.position = 'fixed';
+        a.style.top = '-9999px';
+        a.href = url;
+        a.download = `system_audit_logs_${new Date().toISOString().split('T')[0]}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => {
+          try {
+            if (document.body.contains(a)) document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+          } catch {}
+        }, 30000);
+      } else {
+        window.location.assign('/admin/audit-logs?format=csv');
+      }
+
+      setExportSuccess(true);
+      setTimeout(() => setExportSuccess(false), 3000);
+    } catch (err) {
+      console.warn('Fetch export fallback:', err);
+      window.location.assign('/admin/audit-logs?format=csv');
+      setExportSuccess(true);
+      setTimeout(() => setExportSuccess(false), 3000);
+    }
+  };
 
   return (
     <div className="space-y-6 max-w-7xl">
@@ -29,8 +66,26 @@ export function AdminAuditLog() {
           </h1>
           <p className="text-sm text-slate mt-1">Immutable record of all administrative and system-level actions.</p>
         </div>
-        <button className="bg-white border border-hairline text-slate px-4 py-2 rounded-sm text-sm font-bold hover:bg-slate/5 transition-colors flex items-center gap-2 shadow-sm">
-          <Download className="h-4 w-4" /> Export CSV
+        <button 
+          type="button"
+          onClick={handleExportCsv}
+          className={cn(
+            "border border-hairline px-4 py-2 rounded-sm text-sm font-bold transition-all flex items-center gap-2 shadow-sm cursor-pointer select-none active:scale-95",
+            exportSuccess 
+              ? "bg-growth-teal/15 border-growth-teal text-growth-teal" 
+              : "bg-white text-slate hover:bg-slate/5 hover:text-ink hover:border-slate"
+          )}
+          title="Export audit logs to CSV"
+        >
+          {exportSuccess ? (
+            <>
+              <Check className="h-4 w-4 text-growth-teal" /> Exported!
+            </>
+          ) : (
+            <>
+              <Download className="h-4 w-4" /> Export CSV
+            </>
+          )}
         </button>
       </div>
 

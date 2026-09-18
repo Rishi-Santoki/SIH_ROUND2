@@ -46,12 +46,16 @@ def update_profile(profile_data: InstitutionProfileUpdate, admin: dict = Depends
 def request_verification(req: VerificationRequestCreate, admin: dict = Depends(get_current_institution_admin)):
     client: Client = admin["client"]
     
+    note_parts = [f"Document: {req.document_url}"]
+    if req.comments:
+        note_parts.append(req.comments)
+
     payload = {
         "entity_id": admin["institution_id"],
         "entity_type": "institution",
-        "requested_by": admin["user_id"],
-        "document_url": str(req.document_url),
-        "comments": req.comments
+        "submitted_by": admin["user_id"],
+        "status": "pending",
+        "notes": " | ".join(note_parts)
     }
     
     try:

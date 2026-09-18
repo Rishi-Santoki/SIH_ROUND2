@@ -75,7 +75,7 @@ def discover_candidates(opportunity_id: str, recruiter: dict = Depends(require_v
         "candidates": results
     }
 
-@router.get("/candidates/search")
+@router.get("/candidates/search-talent")
 def search_candidates(
     skill_name: Optional[str] = None, 
     min_proficiency: Optional[int] = None,

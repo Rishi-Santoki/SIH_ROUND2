@@ -5,32 +5,63 @@ from app.models.academician_schemas import CollaborationCreate, CollaborationUpd
 
 router = APIRouter(prefix="/academician", tags=["Academician Collaborations"])
 
-@router.post("/collaborations")
-def propose_collaboration(req: CollaborationCreate, academician: dict = Depends(get_current_academician), client: Client = Depends(get_db_client)):
-    # If company_id is provided, enforce that the company is verified
-    if req.company_id:
-        comp_res = client.table("companies").select("verified").eq("company_id", req.company_id).execute()
-        if not comp_res.data or not comp_res.data[0].get("verified"):
-            raise HTTPException(status_code=403, detail="Company must be verified to propose a collaboration with them")
-            
-    insert_data = req.dict(exclude_unset=True)
-    insert_data["academician_id"] = academician["user_id"]
-    insert_data["status"] = "proposed"
-    
-    # Convert dates to ISO format string if present
-    if insert_data.get("start_date"):
-        insert_data["start_date"] = insert_data["start_date"].isoformat()
-    if insert_data.get("end_date"):
-        insert_data["end_date"] = insert_data["end_date"].isoformat()
-        
-    res = client.table("faculty_collaborations").insert(insert_data).execute()
-    return res.data[0]
+from app.dependencies import get_service_client
+
+@router.get("/collaborations/recommended")
+def get_recommended_collaborations(academician: dict = Depends(get_current_academician), client: Client = Depends(get_db_client)):
+    # Return active / proposed collaborations for faculty recommended feed
+    sc = get_service_client()
+    try:
+        res = sc.table("faculty_collaborations").select("*, companies(name, verified)").order("created_at", desc=True).execute()
+        return res.data or []
+    except Exception:
+        res = sc.table("faculty_collaborations").select("*").order("created_at", desc=True).execute()
+        return res.data or []
+
+@router.get("/collaborations/available")
+def get_available_collaborations(academician: dict = Depends(get_current_academician), client: Client = Depends(get_db_client)):
+    # Return available collaborations
+    sc = get_service_client()
+    try:
+        res = sc.table("faculty_collaborations").select("*, companies(name, verified)").in_("status", ["proposed", "open", "ongoing"]).order("created_at", desc=True).execute()
+        return res.data or []
+    except Exception:
+        res = sc.table("faculty_collaborations").select("*").in_("status", ["proposed", "open", "ongoing"]).order("created_at", desc=True).execute()
+        return res.data or []
 
 @router.get("/collaborations/mine")
 def get_my_collaborations(academician: dict = Depends(get_current_academician), client: Client = Depends(get_db_client)):
-    # Collaborations proposed by this academician (they are the owner)
-    res = client.table("faculty_collaborations").select("*").eq("academician_id", academician["user_id"]).execute()
-    return res.data
+    sc = get_service_client()
+    try:
+        res = sc.table("faculty_collaborations").select("*, companies(name, verified)").eq("academician_id", academician["user_id"]).order("created_at", desc=True).execute()
+        return res.data or []
+    except Exception:
+        res = sc.table("faculty_collaborations").select("*").eq("academician_id", academician["user_id"]).order("created_at", desc=True).execute()
+        return res.data or []
+
+@router.post("/collaborations")
+def propose_collaboration(req: CollaborationCreate, academician: dict = Depends(get_current_academician), client: Client = Depends(get_db_client)):
+    sc = get_service_client()
+    comp_id = req.company_id if (req.company_id and req.company_id.strip()) else None
+
+    insert_data = req.dict(exclude_unset=True)
+    insert_data["academician_id"] = academician["user_id"]
+    insert_data["status"] = "proposed"
+    insert_data["company_id"] = comp_id
+    
+    # Convert dates to string format if present
+    if insert_data.get("start_date"):
+        insert_data["start_date"] = str(insert_data["start_date"])
+    else:
+        insert_data["start_date"] = None
+        
+    if insert_data.get("end_date"):
+        insert_data["end_date"] = str(insert_data["end_date"])
+    else:
+        insert_data["end_date"] = None
+        
+    res = sc.table("faculty_collaborations").insert(insert_data).execute()
+    return res.data[0] if res.data else insert_data
 
 @router.patch("/collaborations/{collaboration_id}")
 def edit_collaboration(collaboration_id: str, req: CollaborationUpdate, academician: dict = Depends(get_current_academician), client: Client = Depends(get_db_client)):

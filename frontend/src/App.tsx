@@ -34,6 +34,7 @@ import { StudentLearning } from './pages/student/StudentLearning';
 import { StudentOpportunities } from './pages/student/StudentOpportunities';
 import { StudentApplications } from './pages/student/StudentApplications';
 import { StudentPortfolio } from './pages/student/StudentPortfolio';
+import { StudentAlumniDetail } from './pages/student/StudentAlumniDetail';
 
 // Industry Pages
 import { IndustryDashboard } from './pages/industry/IndustryDashboard';
@@ -100,7 +101,9 @@ function App() {
             <Route path="applications" element={<StudentApplications />} />
             <Route path="portfolio" element={<StudentPortfolio />} />
             <Route path="alumni" element={<SharedAlumniNetwork />} />
+            <Route path="alumni/:alumniId" element={<StudentAlumniDetail />} />
             <Route path="messages" element={<SharedMessages />} />
+            <Route path="messages/:conversationId" element={<SharedMessages />} />
           </Route>
 
           {/* Industry Dashboard */}
@@ -121,7 +124,9 @@ function App() {
             <Route path="collaborations" element={<AcademicianCollaborations />} />
             <Route path="skill-pulse" element={<AcademicianSkillPulse />} />
             <Route path="alumni" element={<SharedAlumniNetwork />} />
+            <Route path="alumni/:alumniId" element={<StudentAlumniDetail />} />
             <Route path="messages" element={<SharedMessages />} />
+            <Route path="messages/:conversationId" element={<SharedMessages />} />
           </Route>
 
           {/* Institution Dashboard */}

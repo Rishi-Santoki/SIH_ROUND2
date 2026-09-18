@@ -1,11 +1,14 @@
 from fastapi import HTTPException
 from supabase import Client
 
-def _get_requester_institution_id(client: Client, user_id: str, role: str) -> str:
+def _get_requester_institution_id(client: Client, user_id: str, role: str, requesting_user: dict = None) -> str:
+    if requesting_user and requesting_user.get("institution_id"):
+        return requesting_user["institution_id"]
+    active_client = (requesting_user.get("client") if requesting_user else None) or client
     if role == "student":
-        res = client.table("student_profiles").select("institution_id").eq("student_id", user_id).execute()
+        res = active_client.table("student_profiles").select("institution_id").eq("student_id", user_id).execute()
     elif role == "academician":
-        res = client.table("academician_profiles").select("institution_id").eq("academician_id", user_id).execute()
+        res = active_client.table("academician_profiles").select("institution_id").eq("academician_id", user_id).execute()
     else:
         raise HTTPException(status_code=403, detail="Invalid role for directory access")
         
@@ -14,7 +17,7 @@ def _get_requester_institution_id(client: Client, user_id: str, role: str) -> st
     return res.data[0]["institution_id"]
 
 def get_visible_alumni(client: Client, requesting_user: dict, search: str = None, department: str = None, graduation_year: int = None, current_profession: str = None, current_company: str = None, skill_id: str = None):
-    inst_id = _get_requester_institution_id(client, requesting_user["user_id"], requesting_user["role"])
+    inst_id = _get_requester_institution_id(client, requesting_user["user_id"], requesting_user["role"], requesting_user)
     
     query = client.table("alumni_profiles").select(
         "alumni_id, graduation_year, degree, department, current_profession, current_company, current_designation, previous_experience, expertise, bio, linkedin_url, profile_image, is_verified, users(full_name)"
@@ -52,7 +55,7 @@ def get_visible_alumni(client: Client, requesting_user: dict, search: str = None
     return output
 
 def assert_same_institution(client: Client, requesting_user: dict, alumni_id: str) -> None:
-    inst_id = _get_requester_institution_id(client, requesting_user["user_id"], requesting_user["role"])
+    inst_id = _get_requester_institution_id(client, requesting_user["user_id"], requesting_user["role"], requesting_user)
     
     res = client.table("alumni_profiles").select("institution_id, is_verified").eq("alumni_id", alumni_id).execute()
     if not res.data:

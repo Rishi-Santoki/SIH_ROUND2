@@ -28,9 +28,9 @@ def start_assessment(assessment_id: str, student: dict = Depends(get_current_stu
     student_id = student["user_id"]
     
     # 1. Check if an attempt is already in progress
-    in_prog = client.table("assessment_results").select("result_id").eq("student_id", student_id).eq("assessment_id", assessment_id).is_("completed_at", "null").execute()
+    in_prog = client.table("assessment_results").select("*").eq("student_id", student_id).eq("assessment_id", assessment_id).is_("completed_at", "null").execute()
     if in_prog.data:
-        raise HTTPException(status_code=400, detail="An attempt is already in progress.")
+        return in_prog.data[0]
         
     # 2. Get attempt count
     attempts = client.table("assessment_results").select("result_id", count="exact").eq("student_id", student_id).eq("assessment_id", assessment_id).execute()

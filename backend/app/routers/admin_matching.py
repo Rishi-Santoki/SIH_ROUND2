@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Body
 from supabase import Client
 from typing import Optional, Dict
 from datetime import datetime, timedelta
-from app.dependencies import get_current_super_admin, get_db_client
+from app.dependencies import get_current_super_admin, get_db_client, log_admin_action
 
 router = APIRouter(prefix="/admin/matching", tags=["Matching Outcomes"])
 
@@ -203,18 +203,19 @@ def approve_proposal(proposal_id: str, admin: dict = Depends(get_current_super_a
     }).execute()
     
     # 3. Log to audit_logs
-    client.table("audit_logs").insert({
-        "actor_id": admin["user_id"],
-        "action": "match_weights_updated",
-        "entity_type": "platform_settings",
-        "entity_id": "match_score_weights",
-        "details": {
+    log_admin_action(
+        client,
+        admin["user_id"],
+        "match_weights_updated",
+        "platform_settings",
+        proposal_id,
+        {
             "old_weights": old_weights,
             "new_weights": proposal["proposed_weights"],
-            "sample_size": proposal["based_on_sample_size"],
+            "sample_size": proposal.get("based_on_sample_size"),
             "proposal_id": proposal_id
         }
-    }).execute()
+    )
     
     # 4. Update proposal status
     res = client.table("weight_adjustment_proposals").update({

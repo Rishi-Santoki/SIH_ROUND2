@@ -8,6 +8,7 @@ class IndustryOnboarding(BaseModel):
     designation: Optional[str] = None
 
 class CompanyUpdate(BaseModel):
+    name: Optional[str] = None
     description: Optional[str] = None
     industry_type: Optional[str] = None
     website: Optional[str] = None

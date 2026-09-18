@@ -31,8 +31,9 @@ class StudentSkillResponse(BaseModel):
     evidence: List[SkillEvidenceItem]
 
 class SkillDeclareRequest(BaseModel):
-    skill_id: UUID4
-    proficiency_level: int
+    skill_id: Optional[UUID4] = None
+    skill_name: Optional[str] = None
+    proficiency_level: int = 1
 
 # Module 3
 class SkillGapItem(BaseModel):
@@ -100,7 +101,7 @@ class OpportunityMatchResponse(BaseModel):
 
 # Module 7
 class ApplicationCreate(BaseModel):
-    opportunity_id: UUID4
+    opportunity_id: str
 
 # Module 8
 class ProjectCreate(BaseModel):

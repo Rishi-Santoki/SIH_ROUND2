@@ -17,7 +17,7 @@ def list_students(
     institution_id = admin["institution_id"]
     client: Client = admin["client"]
     
-    query = client.table("student_profiles").select("student_id, target_career_role_id, department, current_year, users(full_name, email)").eq("institution_id", institution_id)
+    query = client.table("student_profiles").select("student_id, target_career_id, department, current_year, users(full_name, email)").eq("institution_id", institution_id)
     
     if department:
         query = query.eq("department", department)
@@ -30,8 +30,8 @@ def list_students(
     students = []
     for s in res.data:
         readiness = 0.0
-        if s.get("target_career_role_id"):
-            gaps = get_skill_gaps(client, s["student_id"], s["target_career_role_id"])
+        if s.get("target_career_id"):
+            gaps = get_skill_gaps(client, s["student_id"], s["target_career_id"])
             readiness = calculate_readiness_percentage(gaps)
             
         students.append({
@@ -41,7 +41,7 @@ def list_students(
             "department": s["department"],
             "current_year": s["current_year"],
             "readiness_percentage": round(readiness, 2),
-            "target_career_role_id": s.get("target_career_role_id")
+            "target_career_id": s.get("target_career_id")
         })
         
     return students
@@ -55,12 +55,12 @@ def get_at_risk_students(admin: dict = Depends(get_current_institution_admin)):
     threshold = settings.data[0]["readiness_at_risk_threshold"] if settings.data else 40.0
     
     # Simple heuristic for at-risk
-    res = client.table("student_profiles").select("student_id, target_career_role_id, department, current_year, users(full_name, email)").eq("institution_id", institution_id).in_("current_year", [3, 4]).execute()
+    res = client.table("student_profiles").select("student_id, target_career_id, department, current_year, users(full_name, email)").eq("institution_id", institution_id).in_("current_year", [3, 4]).execute()
     
     at_risk = []
     for s in res.data:
-        if s.get("target_career_role_id"):
-            gaps = get_skill_gaps(client, s["student_id"], s["target_career_role_id"])
+        if s.get("target_career_id"):
+            gaps = get_skill_gaps(client, s["student_id"], s["target_career_id"])
             readiness = calculate_readiness_percentage(gaps)
             if readiness < threshold:
                 at_risk.append({
@@ -79,7 +79,7 @@ def get_student_detail(student_id: str, admin: dict = Depends(get_current_instit
     institution_id = admin["institution_id"]
     client: Client = admin["client"]
     
-    res = client.table("student_profiles").select("student_id, target_career_role_id, department, current_year, users(full_name, email)").eq("student_id", student_id).eq("institution_id", institution_id).execute()
+    res = client.table("student_profiles").select("student_id, target_career_id, department, current_year, users(full_name, email)").eq("student_id", student_id).eq("institution_id", institution_id).execute()
     
     if not res.data:
         raise HTTPException(status_code=404, detail="Student not found or not in your institution")
@@ -88,8 +88,8 @@ def get_student_detail(student_id: str, admin: dict = Depends(get_current_instit
     
     gaps = []
     readiness = 0.0
-    if student.get("target_career_role_id"):
-        gaps = get_skill_gaps(client, student["student_id"], student["target_career_role_id"])
+    if student.get("target_career_id"):
+        gaps = get_skill_gaps(client, student["student_id"], student["target_career_id"])
         readiness = calculate_readiness_percentage(gaps)
         
     student["readiness_percentage"] = round(readiness, 2)

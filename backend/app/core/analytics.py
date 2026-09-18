@@ -5,7 +5,7 @@ from typing import List, Dict
 def get_industry_demand(client: Client, months_window: int = None, skill_map: dict = None) -> List[dict]:
     # Aggregates opportunity skills. Optionally filter by time window (created_at >= now - months_window).
     # MVP: all open opportunities if no time window.
-    query = client.table("opportunities").select("opportunity_id").eq("status", "open")
+    query = client.table("opportunities").select("opportunity_id").in_("status", ["open", "published"])
     
     # If months_window is provided, add time filter in real implementation.
     # We'll just fetch all for now and aggregate.
@@ -77,15 +77,14 @@ def generate_insights(industry_demand: List[dict], student_readiness: List[dict]
     readiness_lookup = {r["_skill_id"]: r for r in student_readiness}
     
     for d in industry_demand:
-        if d["demand_level"] == "HIGH":
-            r = readiness_lookup.get(d["_skill_id"])
-            if not r or r["readiness_level"] in ["LOW", "MODERATE"]:
-                skill_name = d["skill"]
-                r_level = r["readiness_level"] if r else "MISSING"
-                insights.append({
-                    "skill": skill_name,
-                    "insight": f"{skill_name} has a high supply-demand gap (Demand: HIGH, Readiness: {r_level}).",
-                    "action": f"Recommend industry-led {skill_name} workshop or FDP.",
-                    "suggested_collaboration_type": "fdp"
-                })
+        r = readiness_lookup.get(d["_skill_id"])
+        if not r or r["readiness_level"] in ["LOW", "MODERATE"]:
+            skill_name = d["skill"]
+            r_level = r["readiness_level"] if r else "NOT STARTED"
+            insights.append({
+                "skill": skill_name,
+                "insight": f"{skill_name} has a notable supply-demand gap (Demand: {d['demand_level']}, Institutional Readiness: {r_level}).",
+                "action": f"Host an FDP or Guest Lecture to upskill students on modern {skill_name} practices.",
+                "suggested_collaboration_type": "guest_lecture" if len(skill_name) % 2 == 0 else "fdp"
+            })
     return insights

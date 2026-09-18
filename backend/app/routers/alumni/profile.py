@@ -27,10 +27,14 @@ def onboard_alumni_profile(profile: AlumniProfileOnboarding, user: dict = Depend
 @router.get("")
 def get_my_profile(alumni: dict = Depends(get_current_alumni)):
     client: Client = alumni["client"]
-    res = client.table("alumni_profiles").select("*").eq("alumni_id", alumni["user_id"]).execute()
+    res = client.table("alumni_profiles").select("*, users(full_name, email)").eq("alumni_id", alumni["user_id"]).execute()
     if not res.data:
         raise HTTPException(status_code=404, detail="Profile not found")
-    return res.data[0]
+    profile = res.data[0]
+    u = profile.get("users") or {}
+    profile["full_name"] = u.get("full_name") or alumni.get("full_name", "")
+    profile["email"] = u.get("email") or alumni.get("email", "")
+    return profile
 
 @router.patch("")
 async def update_my_profile(request: Request, update: AlumniProfileUpdate, alumni: dict = Depends(get_current_alumni)):
@@ -44,9 +48,16 @@ async def update_my_profile(request: Request, update: AlumniProfileUpdate, alumn
     client: Client = alumni["client"]
     data = update.model_dump(exclude_unset=True)
     
+    full_name = data.pop("full_name", None)
+    if full_name:
+        client.table("users").update({"full_name": full_name}).eq("user_id", alumni["user_id"]).execute()
+
     if not data:
-        return {"message": "No fields to update"}
+        return {"message": "Profile updated", "full_name": full_name}
         
     data["updated_at"] = "now()"
     res = client.table("alumni_profiles").update(data).eq("alumni_id", alumni["user_id"]).execute()
-    return res.data[0]
+    result = res.data[0] if res.data else {}
+    if full_name:
+        result["full_name"] = full_name
+    return result

@@ -11,7 +11,7 @@ def get_notifications(student: dict = Depends(get_current_student), client: Clie
 
 @router.patch("/{notification_id}/read")
 def mark_read(notification_id: str, student: dict = Depends(get_current_student), client: Client = Depends(get_db_client)):
-    res = client.table("notifications").update({"read_status": True}).eq("notification_id", notification_id).eq("user_id", student["user_id"]).execute()
+    res = client.table("notifications").update({"is_read": True}).eq("notification_id", notification_id).eq("user_id", student["user_id"]).execute()
     if not res.data:
         raise HTTPException(status_code=404, detail="Not found")
     return res.data[0]

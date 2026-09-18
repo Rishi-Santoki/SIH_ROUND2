@@ -45,15 +45,15 @@ export function Onboarding() {
           return;
         }
         
-        const userRole = user.user_metadata?.role;
+        const userRole = (user.user_metadata?.role || '').toLowerCase();
         setRole(userRole);
 
-        if (userRole === 'Student' || userRole === 'Academician' || userRole === 'Alumni') {
+        if (userRole === 'student' || userRole === 'academician' || userRole === 'alumni') {
           const insts = await mockGetInstitutions();
           setInstitutions(insts);
         }
         
-        if (userRole === 'Industry') {
+        if (userRole === 'industry') {
           const comps = await mockGetCompanies();
           setCompanies(comps);
         }
@@ -113,7 +113,7 @@ export function Onboarding() {
         <form onSubmit={handleSubmit} className="space-y-6">
           
           {/* Dynamic fields based on role */}
-          {role === 'Student' && (
+          {role === 'student' && (
             <>
               <div className="space-y-1">
                 <label className="text-sm font-medium text-ink">Institution</label>
@@ -143,7 +143,7 @@ export function Onboarding() {
             </>
           )}
 
-          {role === 'Industry' && (
+          {role === 'industry' && (
             <>
               <div className="space-y-1">
                 <label className="text-sm font-medium text-ink">Company</label>
@@ -174,7 +174,7 @@ export function Onboarding() {
           )}
 
           {/* Fallback for roles that are not fully detailed here */}
-          {(role !== 'Student' && role !== 'Industry') && (
+          {(role !== 'student' && role !== 'industry') && (
             <div className="bg-slate/5 p-4 border border-hairline rounded-sm text-sm text-slate">
               Please provide the required details for the {role} onboarding flow.
             </div>

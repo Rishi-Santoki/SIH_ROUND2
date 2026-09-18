@@ -16,8 +16,10 @@ class AlumniProfileOnboarding(BaseModel):
     profile_image: Optional[str] = None
 
 class AlumniProfileUpdate(BaseModel):
+    full_name: Optional[str] = None
     degree: Optional[str] = None
     department: Optional[str] = None
+    graduation_year: Optional[int] = None
     current_profession: Optional[str] = None
     current_company: Optional[str] = None
     current_designation: Optional[str] = None
@@ -31,7 +33,8 @@ class AlumniProfileUpdate(BaseModel):
     # alumni_id, role, institution_id, is_verified
 
 class AlumniSkillAdd(BaseModel):
-    skill_id: str
+    skill_id: Optional[str] = None
+    skill_name: Optional[str] = None
     proficiency_level: Optional[int] = Field(None, ge=1, le=5)
     willing_to_mentor: Optional[bool] = False
     found_challenging: Optional[bool] = False

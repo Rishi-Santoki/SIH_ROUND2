@@ -74,6 +74,35 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from pathlib import Path
+from starlette.requests import Request
+from fastapi.responses import FileResponse
+
+FRONTEND_DIST = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"
+
+NO_CACHE_HEADERS = {
+    "Cache-Control": "no-cache, no-store, must-revalidate",
+    "Pragma": "no-cache",
+    "Expires": "0",
+}
+
+@app.middleware("http")
+async def serve_spa_on_browser_navigation(request: Request, call_next):
+    if request.method == "GET":
+        path = request.url.path
+        accept = request.headers.get("accept", "")
+        # If the browser is requesting a page directly in the address bar
+        if (
+            "text/html" in accept 
+            and not path.startswith(("/docs", "/redoc", "/openapi.json", "/assets", "/files", "/health"))
+            and "format=csv" not in str(request.query_params)
+            and not path.endswith(".csv")
+        ):
+            index_file = FRONTEND_DIST / "index.html"
+            if index_file.exists():
+                return FileResponse(index_file, headers=NO_CACHE_HEADERS)
+    return await call_next(request)
+
 from app.routers import auth
 from app.routers import files
 
@@ -115,8 +144,8 @@ app.include_router(industry_copilot.router)
 
 # Academician modules
 app.include_router(academician_profile.router)
-app.include_router(academician_discover.router)
 app.include_router(academician_collaborations.router)
+app.include_router(academician_discover.router)
 app.include_router(academician_skill_pulse.router)
 app.include_router(academician_notifications.router)
 app.include_router(academician_copilot.router)
@@ -145,3 +174,29 @@ app.include_router(community_messaging.router)
 @app.get("/health")
 def health_check():
     return {"status": "ok"}
+
+# Frontend Integration: Serve both Frontend and Backend on one host
+from fastapi.staticfiles import StaticFiles
+
+if FRONTEND_DIST.exists():
+    assets_dir = FRONTEND_DIST / "assets"
+    if assets_dir.exists():
+        app.mount("/assets", StaticFiles(directory=str(assets_dir)), name="assets")
+
+    @app.get("/")
+    async def serve_root():
+        index_file = FRONTEND_DIST / "index.html"
+        if index_file.exists():
+            return FileResponse(index_file, headers=NO_CACHE_HEADERS)
+        return {"message": "API running. Frontend build not found."}
+
+    @app.get("/{full_path:path}")
+    async def serve_spa_frontend(full_path: str):
+        file_path = FRONTEND_DIST / full_path
+        if full_path and file_path.is_file():
+            return FileResponse(file_path)
+        index_file = FRONTEND_DIST / "index.html"
+        if index_file.exists():
+            return FileResponse(index_file, headers=NO_CACHE_HEADERS)
+        return {"error": "Not found"}
+

@@ -77,13 +77,27 @@ def calculate_readiness_percentage(gaps: list) -> float:
     return min(percentage, 100.0)
 
 def calculate_match_score(client: Client, student_id: str, opportunity_id: str, target_career_id: str) -> dict:
-    settings = client.table("platform_settings").select("match_score_weights").limit(1).execute()
-    weights = settings.data[0]["match_score_weights"] if settings.data else {
-        "skills": 0.40,
-        "assessments": 0.20,
-        "projects": 0.15,
-        "eligibility": 0.10,
-        "career_interest": 0.15
+    try:
+        setting_row = client.table("platform_settings").select("setting_value").eq("setting_key", "match_score_weights").execute()
+        raw_weights = setting_row.data[0]["setting_value"] if (setting_row.data and isinstance(setting_row.data[0].get("setting_value"), dict)) else {}
+    except Exception:
+        raw_weights = {}
+
+    def _norm(val, default):
+        if val is None:
+            return default
+        try:
+            f = float(val)
+            return f / 100.0 if f > 1.0 else f
+        except Exception:
+            return default
+
+    weights = {
+        "skills": _norm(raw_weights.get("skills") or raw_weights.get("skillMatch"), 0.40),
+        "assessments": _norm(raw_weights.get("assessments") or raw_weights.get("verifiedEvidence"), 0.20),
+        "projects": _norm(raw_weights.get("projects"), 0.15),
+        "eligibility": _norm(raw_weights.get("eligibility"), 0.10),
+        "career_interest": _norm(raw_weights.get("career_interest"), 0.15)
     }
     
     # Fetch opportunity skills

@@ -1,7 +1,9 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { FileSignature, XCircle, Clock, CheckCircle2, ArrowRight } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { FileSignature, XCircle, Clock, CheckCircle2, ArrowRight, Loader2 } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { apiClient } from '../../lib/api';
 
 const MOCK_APPS = [
   {
@@ -27,6 +29,25 @@ const MOCK_APPS = [
 const STAGES = ['applied', 'shortlisted', 'interview', 'selected', 'rejected'];
 
 export function StudentApplications() {
+  const { data: apiApps, isLoading } = useQuery<any[]>({
+    queryKey: ['student', 'applications'],
+    queryFn: () => apiClient<any[]>('/student/applications'),
+    retry: 1,
+  });
+
+  // Merge real applications with mock fallback if empty
+  const displayedApps = (Array.isArray(apiApps) && apiApps.length > 0)
+    ? apiApps.map((a: any) => ({
+        id: a.application_id || a.id,
+        role: a.opportunities?.title || 'Data Analyst',
+        company: a.opportunities?.company_name || a.opportunities?.company || 'Industry Partner',
+        status: a.status || 'applied',
+        appliedDate: a.created_at ? new Date(a.created_at).toLocaleDateString() : 'Just now',
+        recruiterNote: a.recruiter_notes || 'Application received via ProofLedger.',
+        frozenScore: a.match_score,
+        weakestLink: a.match_score_breakdown ? Object.keys(a.match_score_breakdown)[0] : undefined
+      }))
+    : MOCK_APPS;
   return (
     <div className="space-y-8">
       <div>
@@ -35,7 +56,7 @@ export function StudentApplications() {
       </div>
 
       <div className="space-y-4">
-        {MOCK_APPS.map(app => {
+        {displayedApps.map((app: any) => {
           const currentIndex = STAGES.indexOf(app.status);
           const isRejected = app.status === 'rejected';
 

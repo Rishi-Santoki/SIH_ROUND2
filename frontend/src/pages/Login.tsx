@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ShieldCheck, AlertCircle, ArrowRight } from 'lucide-react';
 
+import { supabase } from '../lib/supabase';
+
 // Demo credentials that work for all dashboards
 const DEMO_EMAIL = 'demo@proofledger.in';
 const DEMO_PASSWORD = 'demo1234';
@@ -28,25 +30,67 @@ export function Login() {
     setError(null);
     setLoading(true);
 
-    // Simulate a small delay
-    await new Promise(r => setTimeout(r, 400));
+    try {
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password: password
+      });
 
-    if (email === DEMO_EMAIL && password === DEMO_PASSWORD) {
-      setShowRolePicker(true);
-      setLoading(false);
-    } else {
-      setError('Incorrect email or password. Use the demo credentials shown below.');
+      if (authError) {
+        if (email.trim() === DEMO_EMAIL && password === DEMO_PASSWORD) {
+          setShowRolePicker(true);
+          setLoading(false);
+          return;
+        }
+        setError(authError.message || 'Incorrect email or password.');
+        setLoading(false);
+        return;
+      }
+
+      const role = data?.user?.user_metadata?.role;
+      if (role === 'alumni') navigate('/alumni');
+      else if (role === 'student') navigate('/student');
+      else if (role === 'industry') navigate('/industry');
+      else if (role === 'academician') navigate('/academician');
+      else if (role === 'institution') navigate('/institution');
+      else if (role === 'super_admin' || role === 'admin') navigate('/admin');
+      else navigate('/');
+    } catch (err: any) {
+      setError(err.message || 'Login failed');
+    } finally {
       setLoading(false);
     }
   };
 
-  const handleQuickLogin = (route: string) => {
+  const handleQuickLogin = async (roleLabel: string, route: string) => {
+    setLoading(true);
+    setError(null);
+    const roleCreds: Record<string, { email: string; pass: string }> = {
+      'Student': { email: 'rohan.mehta@ldrp.test', pass: 'Test@12345' },
+      'Industry': { email: 'priya.sharma@tcs.test', pass: 'Test@12345' },
+      'Academician': { email: 'anita.deshmukh@ldrp.test', pass: 'Test@12345' },
+      'Institution': { email: 'suresh.iyer@ldrp.test', pass: 'Test@12345' },
+      'Admin': { email: 'admin@platform.test', pass: 'Test@12345' },
+      'Alumni': { email: 'meera.joshi@ldrp.test', pass: 'Test@12345' },
+    };
+    const creds = roleCreds[roleLabel];
+    if (creds) {
+      try {
+        await supabase.auth.signInWithPassword({
+          email: creds.email,
+          password: creds.pass
+        });
+      } catch {
+        // Fall through
+      }
+    }
+    setLoading(false);
     navigate(route);
   };
 
   const fillDemo = () => {
-    setEmail(DEMO_EMAIL);
-    setPassword(DEMO_PASSWORD);
+    setEmail('meera.joshi@ldrp.test');
+    setPassword('Test@12345');
   };
 
   if (showRolePicker) {
@@ -63,7 +107,7 @@ export function Login() {
             {DEMO_ROLES.map((role) => (
               <button
                 key={role.label}
-                onClick={() => handleQuickLogin(role.route)}
+                onClick={() => handleQuickLogin(role.label, role.route)}
                 className={`${role.color} text-white p-4 rounded-sm text-sm font-bold hover:opacity-90 transition-all flex items-center justify-between shadow-sm`}
               >
                 {role.label}
@@ -161,7 +205,7 @@ export function Login() {
             {DEMO_ROLES.map((role) => (
               <button
                 key={role.label}
-                onClick={() => handleQuickLogin(role.route)}
+                onClick={() => handleQuickLogin(role.label, role.route)}
                 className="border border-hairline text-ink px-3 py-2 rounded-sm text-xs font-bold hover:bg-slate/5 transition-colors"
               >
                 {role.label}

@@ -20,12 +20,20 @@ def get_learning_recommendations(student: dict = Depends(get_current_student), c
     # In a real impl, fetch program_skills matching the missing skill_ids
     return recs
 
+@router.get("/available")
+def list_available_programs(client: Client = Depends(get_db_client)):
+    res = client.table("learning_programs").select("program_id, title, description, duration, url, is_active").eq("is_active", True).execute()
+    return res.data
+
 @router.post("")
 def enroll_program(program_id: UUID4, student: dict = Depends(get_current_student), client: Client = Depends(get_db_client)):
+    existing = client.table("student_learning_progress").select("*").eq("student_id", student["user_id"]).eq("program_id", str(program_id)).execute()
+    if existing.data:
+        return existing.data
     data = {
         "student_id": student["user_id"],
         "program_id": str(program_id),
-        "status": "not_started",
+        "status": "in_progress",
         "progress_percentage": 0
     }
     res = client.table("student_learning_progress").insert(data).execute()
