@@ -90,13 +90,22 @@ export function StudentSkills() {
       score: ev.weight ? `Weight: ${ev.weight}` : undefined
     }));
 
+    const rawConf = typeof s.confidence_score === 'number' ? s.confidence_score : null;
+    let computedProficiency = 20;
+    if (rawConf !== null) {
+      computedProficiency = rawConf <= 1.0 ? Math.round(rawConf * 100) : Math.round(rawConf);
+    } else if (s.proficiency_level) {
+      computedProficiency = s.proficiency_level <= 5 ? s.proficiency_level * 20 : s.proficiency_level;
+    }
+    computedProficiency = Math.max(0, Math.min(100, computedProficiency));
+
     return {
       id: s.skill_id || `skill-${idx}`,
       skill_id: s.skill_id,
       category: s.category || 'General Skills',
       name: s.skill_name || 'Skill',
       status,
-      proficiency: s.confidence_score ? Math.round(s.confidence_score * 100) : (s.proficiency_level ? s.proficiency_level * 20 : 20),
+      proficiency: computedProficiency,
       evidenceCount: s.evidence?.length || 0,
       subTopics: [],
       evidence: evidenceList

@@ -58,14 +58,14 @@ def seed_rohan():
 
     # 4. Seed Skills
     skill_names_to_add = [
-        ("AWS", 82, "verified", "assessment", 92),
-        ("Docker", 75, "verified", "project", 85),
-        ("Kubernetes", 62, "self_declared", "self_declared", 60),
-        ("Python", 88, "verified", "assessment", 95),
-        ("Cloud Computing", 84, "verified", "certificate", 90),
-        ("SQL", 78, "verified", "assessment", 84),
-        ("Machine Learning", 70, "self_declared", "self_declared", 72),
-        ("JavaScript", 74, "verified", "project", 76),
+        ("AWS", 82, "verified", "assessment", 0.92),
+        ("Docker", 75, "verified", "project", 0.85),
+        ("Kubernetes", 62, "self_declared", "self_declared", 0.60),
+        ("Python", 88, "verified", "assessment", 0.95),
+        ("Cloud Computing", 84, "verified", "certificate", 0.90),
+        ("SQL", 78, "verified", "assessment", 0.84),
+        ("Machine Learning", 70, "self_declared", "self_declared", 0.72),
+        ("JavaScript", 74, "verified", "project", 0.76),
     ]
 
     skill_id_map = {}
