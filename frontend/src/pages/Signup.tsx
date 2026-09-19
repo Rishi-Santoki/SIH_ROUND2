@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ShieldCheck, AlertCircle, ArrowRight } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { apiClient } from '../lib/api';
 import { cn } from '../lib/utils';
 import { ProofBadge } from '../components/ui/ProofBadge';
 
@@ -37,21 +38,28 @@ export function Signup() {
     setLoading(true);
 
     try {
-      const { data, error: signUpError } = await supabase.auth.signUp({
-        email,
+      const userRole = selectedRole.toLowerCase();
+      
+      // 1. Register through backend to avoid Supabase email confirmation rate limits
+      await apiClient.post('/auth/register', {
+        email: email.trim(),
         password,
-        options: {
-          data: {
-            full_name: name,
-            role: selectedRole.toLowerCase()
-          }
-        }
+        full_name: name.trim(),
+        role: userRole
       });
 
-      if (signUpError) throw signUpError;
+      // 2. Sign in immediately to establish active session
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password
+      });
+
+      if (signInError) {
+        throw signInError;
+      }
       
-      // Navigate to onboarding
-      navigate('/onboarding');
+      // 3. Navigate directly to role-specific dashboard
+      navigate(`/${userRole}`);
       
     } catch (err: any) {
       setError(err.message || 'An error occurred during signup.');

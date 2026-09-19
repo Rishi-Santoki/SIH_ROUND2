@@ -22,7 +22,7 @@ def get_learning_recommendations(student: dict = Depends(get_current_student), c
 
 @router.get("/available")
 def list_available_programs(client: Client = Depends(get_db_client)):
-    res = client.table("learning_programs").select("program_id, title, description, duration, url, is_active").eq("is_active", True).execute()
+    res = client.table("learning_programs").select("program_id, title, description, duration, mode, url, is_free, is_active").eq("is_active", True).execute()
     return res.data
 
 @router.post("")

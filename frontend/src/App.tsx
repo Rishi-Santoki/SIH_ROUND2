@@ -5,6 +5,7 @@ import { Login } from './pages/Login';
 import { Signup } from './pages/Signup';
 import { Onboarding } from './pages/Onboarding';
 import { ForgotPassword } from './pages/ForgotPassword';
+import { DashboardRedirect } from './pages/DashboardRedirect';
 
 // Layouts
 import { StudentLayout } from './components/layout/StudentLayout';
@@ -163,6 +164,9 @@ function App() {
             <Route path="messages" element={<AlumniMessages />} />
           </Route>
 
+          {/* Generic /dashboard and 404 Fallback to role-specific dashboard */}
+          <Route path="/dashboard" element={<DashboardRedirect />} />
+          <Route path="*" element={<DashboardRedirect />} />
         </Routes>
       </BrowserRouter>
     </QueryClientProvider>

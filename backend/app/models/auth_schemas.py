@@ -5,3 +5,10 @@ class UserUpdate(BaseModel):
     full_name: Optional[str] = None
     phone_number: Optional[str] = None
     profile_image: Optional[str] = None
+
+class RegisterRequest(BaseModel):
+    email: str
+    password: str
+    full_name: str
+    role: str
+

@@ -8,6 +8,36 @@ from app.routers.student_roadmap import generate_skill_roadmap
 
 router = APIRouter(prefix="/student", tags=["Readiness & Roadmap"])
 
+@router.get("/readiness")
+def get_student_readiness(student: dict = Depends(get_current_student), client: Client = Depends(get_db_client)):
+    try:
+        res = client.table("student_profiles").select("target_career_id").eq("student_id", student["user_id"]).execute()
+        if not res.data or not res.data[0].get("target_career_id"):
+            return {
+                "target_role_title": None,
+                "readiness_score": 0.0,
+                "has_target_role": False
+            }
+        
+        target_role_id = res.data[0]["target_career_id"]
+        cr = client.table("career_roles").select("title").eq("career_role_id", target_role_id).execute()
+        target_role_name = cr.data[0]["title"] if cr.data else None
+        
+        gaps = get_skill_gaps(client, student["user_id"], target_role_id)
+        readiness = calculate_readiness_percentage(gaps)
+        
+        return {
+            "target_role_title": target_role_name,
+            "readiness_score": float(readiness),
+            "has_target_role": True
+        }
+    except Exception:
+        return {
+            "target_role_title": None,
+            "readiness_score": 0.0,
+            "has_target_role": False
+        }
+
 @router.get("/career-digital-twin")
 def get_digital_twin(student: dict = Depends(get_current_student), client: Client = Depends(get_db_client)):
     target_role_id = _get_target_role(client, student["user_id"])

@@ -15,8 +15,10 @@ const mockGetCompanies = async () => [
 ];
 
 // Mock API for onboarding status check
-const mockCheckOnboardingStatus = async () => {
-  return { complete: true, dashboard_route: '/dashboard' };
+const mockCheckOnboardingStatus = async (userRole?: string) => {
+  const r = (userRole || '').toLowerCase();
+  const route = r === 'industry' ? '/industry' : r === 'academician' ? '/academician' : r === 'institution' ? '/institution' : r === 'alumni' ? '/alumni' : (r === 'admin' || r === 'super_admin') ? '/admin' : '/student';
+  return { complete: true, dashboard_route: route };
 };
 
 export function Onboarding() {
@@ -77,7 +79,7 @@ export function Onboarding() {
       // e.g., POST /auth/onboarding/student
       
       // After submission, check status
-      const status = await mockCheckOnboardingStatus();
+      const status = await mockCheckOnboardingStatus(role || undefined);
       if (status.complete) {
         navigate(status.dashboard_route);
       } else {

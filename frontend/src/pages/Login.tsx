@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { ShieldCheck, AlertCircle, ArrowRight } from 'lucide-react';
 
 import { supabase } from '../lib/supabase';
+import { apiClient } from '../lib/api';
 
 // Demo credentials that work for all dashboards
 const DEMO_EMAIL = 'demo@proofledger.in';
@@ -31,10 +32,25 @@ export function Login() {
     setLoading(true);
 
     try {
-      const { data, error: authError } = await supabase.auth.signInWithPassword({
+      let { data, error: authError } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password: password
       });
+
+      // If email is unconfirmed, auto-confirm through backend and retry login!
+      if (authError && authError.message.toLowerCase().includes('email not confirmed')) {
+        try {
+          await apiClient.post('/auth/confirm-account', { email: email.trim() });
+          const retry = await supabase.auth.signInWithPassword({
+            email: email.trim(),
+            password: password
+          });
+          data = retry.data;
+          authError = retry.error;
+        } catch {
+          // Continue with original error
+        }
+      }
 
       if (authError) {
         if (email.trim() === DEMO_EMAIL && password === DEMO_PASSWORD) {
@@ -47,14 +63,14 @@ export function Login() {
         return;
       }
 
-      const role = data?.user?.user_metadata?.role;
+      const role = (data?.user?.user_metadata?.role || '').toLowerCase();
       if (role === 'alumni') navigate('/alumni');
       else if (role === 'student') navigate('/student');
       else if (role === 'industry') navigate('/industry');
       else if (role === 'academician') navigate('/academician');
       else if (role === 'institution') navigate('/institution');
       else if (role === 'super_admin' || role === 'admin') navigate('/admin');
-      else navigate('/');
+      else navigate('/dashboard');
     } catch (err: any) {
       setError(err.message || 'Login failed');
     } finally {

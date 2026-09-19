@@ -123,17 +123,17 @@ export function StudentDashboard() {
 
   const studentProfile = profileData?.student_profiles?.[0] || profileData?.student_profiles || {};
   const currentRole = careerRoles?.find(r => r.career_role_id === studentProfile.target_career_id);
-  const targetRoleTitle = currentRole?.title || readinessData?.target_role_title || 'Junior Data Scientist';
+  const targetRoleTitle = currentRole?.title || readinessData?.target_role_title || 'No Target Role Selected';
 
-  const readinessScore = readinessData?.readiness_score 
+  const readinessScore = readinessData?.readiness_score != null
     ? Math.round(readinessData.readiness_score) 
-    : (studentProfile.readiness_score || 65);
+    : (studentProfile.readiness_score != null ? Math.round(studentProfile.readiness_score) : 0);
 
-  const verifiedCount = skillsData?.filter(s => s.verification_status === 'verified').length ?? 12;
-  const selfDeclaredCount = skillsData?.filter(s => s.verification_status === 'unverified' || s.source === 'self_declared').length ?? 8;
-  const activeAppsCount = applicationsData?.filter(a => a.status !== 'rejected').length ?? 3;
+  const verifiedCount = skillsData?.filter(s => s.verification_status === 'verified').length ?? 0;
+  const selfDeclaredCount = skillsData?.filter(s => s.verification_status === 'unverified' || s.source === 'self_declared').length ?? 0;
+  const activeAppsCount = applicationsData?.filter(a => a.status !== 'rejected').length ?? 0;
 
-  const currentCourse = learningData?.[0] || null;
+  const currentCourse = (learningData && learningData.length > 0) ? learningData[0] : null;
 
   const handleSaveRole = (e: React.FormEvent) => {
     e.preventDefault();
@@ -223,16 +223,32 @@ export function StudentDashboard() {
                 <Target className="h-3 w-3" /> Next Best Action
               </div>
               <div className="font-medium text-ink text-sm">
-                Pass available Assessments to close your highest-ranked gap and increase matching score.
+                {!studentProfile.target_career_id
+                  ? 'Select a target career role to calibrate your skill gap analysis and unlock your career roadmap.'
+                  : (verifiedCount === 0
+                    ? 'Take skill assessments or submit verified evidence to start increasing your readiness score.'
+                    : 'Pass available assessments to close your highest-ranked skill gap and increase matching score.')}
               </div>
             </div>
-            <Link 
-              to="/student/assessments" 
-              className="flex items-center justify-center h-8 w-8 bg-ink text-paper rounded-full hover:bg-ink/90 transition-colors shrink-0 ml-4"
-              title="Go to Assessments"
-            >
-              <ArrowRight className="h-4 w-4" />
-            </Link>
+            {!studentProfile.target_career_id ? (
+              <button
+                onClick={() => {
+                  setSelectedRoleId(studentProfile.target_career_id || '');
+                  setIsEditingRole(true);
+                }}
+                className="flex items-center justify-center h-8 px-3 bg-ink text-paper text-xs font-medium rounded-sm hover:bg-ink/90 transition-colors shrink-0 ml-4"
+              >
+                Choose Role
+              </button>
+            ) : (
+              <Link 
+                to="/student/assessments" 
+                className="flex items-center justify-center h-8 w-8 bg-ink text-paper rounded-full hover:bg-ink/90 transition-colors shrink-0 ml-4"
+                title="Go to Assessments"
+              >
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            )}
           </div>
         </div>
       </div>
@@ -445,37 +461,58 @@ export function StudentDashboard() {
 
       {/* Continue Where You Left Off */}
       <div className="bg-white border border-hairline rounded-sm shadow-sm overflow-hidden">
-        <div className="px-6 py-4 border-b border-hairline bg-paper">
-          <h3 className="font-bold text-ink text-sm uppercase tracking-wider">Continue Where You Left Off</h3>
+        <div className="px-6 py-4 border-b border-hairline bg-paper flex items-center justify-between">
+          <h3 className="font-bold text-ink text-sm uppercase tracking-wider">Active Learning Programs</h3>
+          <Link to="/student/learning" className="text-xs text-growth-teal font-bold hover:underline">
+            Browse All Courses →
+          </Link>
         </div>
-        <Link 
-          to="/student/learning"
-          className="p-6 flex flex-col sm:flex-row items-center gap-4 justify-between hover:bg-slate/5 transition-colors cursor-pointer group"
-        >
-          <div className="flex items-center gap-4">
-            <div className="h-12 w-12 bg-growth-teal/10 rounded-sm flex items-center justify-center text-growth-teal">
+        {currentCourse ? (
+          <Link 
+            to="/student/learning"
+            className="p-6 flex flex-col sm:flex-row items-center gap-4 justify-between hover:bg-slate/5 transition-colors cursor-pointer group"
+          >
+            <div className="flex items-center gap-4">
+              <div className="h-12 w-12 bg-growth-teal/10 rounded-sm flex items-center justify-center text-growth-teal">
+                <BookOpen className="h-6 w-6" />
+              </div>
+              <div>
+                <h4 className="font-bold text-ink group-hover:text-growth-teal transition-colors">
+                  {currentCourse?.learning_programs?.title || 'Learning Program'}
+                </h4>
+                <p className="text-sm text-slate mt-1">
+                  Status: {currentCourse.status?.replace('_', ' ')} • NPTEL / SWAYAM
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-4 w-full sm:w-auto">
+               <div className="flex-1 sm:w-32 bg-slate/10 h-2 rounded-full overflow-hidden">
+                  <div 
+                    className="bg-growth-teal h-full transition-all" 
+                    style={{ width: `${currentCourse?.progress_percentage ?? 0}%` }} 
+                  />
+               </div>
+               <span className="text-xs font-bold text-slate">{currentCourse?.progress_percentage ?? 0}%</span>
+               <ArrowRight className="h-4 w-4 text-slate opacity-0 group-hover:opacity-100 transition-opacity" />
+            </div>
+          </Link>
+        ) : (
+          <div className="p-8 text-center flex flex-col items-center justify-center gap-3">
+            <div className="h-12 w-12 bg-slate/5 rounded-full flex items-center justify-center text-slate">
               <BookOpen className="h-6 w-6" />
             </div>
             <div>
-              <h4 className="font-bold text-ink group-hover:text-growth-teal transition-colors">
-                {currentCourse?.learning_programs?.title || 'Python Data Structures'}
-              </h4>
-              <p className="text-sm text-slate mt-1">
-                {currentCourse ? `Status: ${currentCourse.status}` : 'Step 3 of 5 in your Data Scientist Roadmap'}
-              </p>
+              <p className="font-medium text-ink text-sm">No active courses yet</p>
+              <p className="text-xs text-slate mt-0.5">Explore accredited SWAYAM and NPTEL courses to develop skills and close career gaps.</p>
             </div>
+            <Link 
+              to="/student/learning"
+              className="mt-1 bg-ink text-paper px-4 py-2 rounded-sm text-xs font-medium hover:bg-ink/90 transition-colors"
+            >
+              Explore Course Catalog
+            </Link>
           </div>
-          <div className="flex items-center gap-4 w-full sm:w-auto">
-             <div className="flex-1 sm:w-32 bg-slate/10 h-2 rounded-full overflow-hidden">
-                <div 
-                  className="bg-growth-teal h-full transition-all" 
-                  style={{ width: `${currentCourse?.progress_percentage ?? 60}%` }} 
-                />
-             </div>
-             <span className="text-xs font-bold text-slate">{currentCourse?.progress_percentage ?? 60}%</span>
-             <ArrowRight className="h-4 w-4 text-slate opacity-0 group-hover:opacity-100 transition-opacity" />
-          </div>
-        </Link>
+        )}
       </div>
 
     </div>

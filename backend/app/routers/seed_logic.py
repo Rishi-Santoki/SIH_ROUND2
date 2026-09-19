@@ -117,22 +117,23 @@ def run_seed_reference_data(client):
                     "is_mandatory": mandatory
                 }).execute()
 
-    # 4. Seed Learning Programs
+    # 4. Seed Learning Programs (Official NPTEL / SWAYAM Govt. of India)
     programs = [
-        ("Deep Learning Specialization", "course", "Deep Learning", 4, True),
-        ("MLOps Fundamentals", "course", "MLOps", 3, False),
-        ("SQL for Data Analysis", "course", "SQL", 4, True),
-        ("Cloud Practitioner Essentials", "course", "Cloud Computing", 3, True),
-        ("Docker & Kubernetes Crash Course", "course", "Docker", 3, False),
-        ("Full Stack Web Development Bootcamp", "bootcamp", "React", 4, False),
-        ("Network Security Fundamentals", "course", "Network Security", 3, True)
+        ("Programming, Data Structures and Algorithms using Python", "course", "Python", 4, True, "https://onlinecourses.nptel.ac.in/noc24_cs41/preview", "8 weeks", "Online (IIT Madras - NPTEL)", "Official NPTEL course offered by Prof. Madhavan Mukund (IIT Madras) on SWAYAM. Covers Python programming, algorithmic search and sorting, recursion, and core data structures."),
+        ("Deep Learning", "course", "Deep Learning", 4, True, "https://swayam.gov.in/nd1_noc26_cs88/preview", "12 weeks", "Online (IIT Ropar - NPTEL)", "Official NPTEL course offered by IIT Ropar on SWAYAM. Master neural networks, backpropagation, CNNs, RNNs, Autoencoders, and PyTorch deep learning architectures."),
+        ("Database Management System", "course", "SQL", 4, True, "https://onlinecourses.nptel.ac.in/noc24_cs48/preview", "8 weeks", "Online (IIT Kharagpur - NPTEL)", "Official NPTEL course offered by Prof. Partha Pratim Das (IIT Kharagpur) on SWAYAM. In-depth Relational Models, SQL, Normalization, Query Processing, and Transaction Management."),
+        ("Cloud Computing", "course", "Cloud Computing", 3, True, "https://onlinecourses.nptel.ac.in/noc24_cs17/preview", "8 weeks", "Online (IIT Kharagpur - NPTEL)", "Official NPTEL course offered by Prof. Soumya Kanti Ghosh (IIT Kharagpur) on SWAYAM. Covers Cloud virtualization, resource scheduling, distributed file systems, and cloud security."),
+        ("Introduction to Machine Learning", "course", "Machine Learning", 4, True, "https://onlinecourses.nptel.ac.in/noc24_cs54/preview", "12 weeks", "Online (IIT Madras - NPTEL)", "Official NPTEL course offered by Prof. Balaraman Ravindran (IIT Madras) on SWAYAM. Comprehensive machine learning: regression, classification, clustering, PCA, and model evaluation."),
+        ("Data Science for Engineers", "course", "Data Analysis", 3, True, "https://onlinecourses.nptel.ac.in/noc24_ch43/preview", "8 weeks", "Online (IIT Madras - NPTEL)", "Official NPTEL course offered by Prof. Ragunathan Rengasamy (IIT Madras) on SWAYAM. Computational linear algebra, data wrangling, statistical inference, and predictive analytics."),
+        ("Ethical Hacking and Network Defense", "course", "Network Security", 3, True, "https://onlinecourses.nptel.ac.in/noc24_cs42/preview", "12 weeks", "Online (IIT Kharagpur - NPTEL)", "Official NPTEL course offered by Prof. Indranil Sengupta (IIT Kharagpur) on SWAYAM. Network vulnerability scanning, penetration testing, cryptography, and defensive security protocols."),
+        ("Introduction to Internet of Things", "course", "IoT", 3, True, "https://onlinecourses.nptel.ac.in/noc24_cs36/preview", "12 weeks", "Online (IIT Kharagpur - NPTEL)", "Official NPTEL course offered by Prof. Sudip Misra (IIT Kharagpur) on SWAYAM. Sensor networks, MQTT/CoAP protocols, embedded systems, edge computing, and smart IoT applications.")
     ]
     
     # We need a provider institution ID for learning programs
     inst_res = client.table("institutions").select("institution_id").limit(1).execute()
     provider_inst_id = inst_res.data[0]["institution_id"] if inst_res.data else None
     
-    for title, ptype, target_skill, level, is_free in programs:
+    for title, ptype, target_skill, level, is_free, url, duration, mode, desc in programs:
         res = client.table("learning_programs").select("program_id").eq("title", title).execute()
         if not res.data:
             res = client.table("learning_programs").insert({
@@ -140,10 +141,20 @@ def run_seed_reference_data(client):
                 "provider_id": provider_inst_id,
                 "program_type": ptype,
                 "is_free": is_free,
-                "duration": "4 weeks",
-                "mode": "online",
-                "description": f"Learn {target_skill}",
+                "duration": duration,
+                "mode": mode,
+                "url": url,
+                "description": desc,
+                "is_active": True
             }).execute()
+        else:
+            client.table("learning_programs").update({
+                "url": url,
+                "duration": duration,
+                "mode": mode,
+                "description": desc,
+                "is_active": True
+            }).eq("program_id", res.data[0]["program_id"]).execute()
         prog_id = res.data[0]["program_id"]
         
         # Link skill

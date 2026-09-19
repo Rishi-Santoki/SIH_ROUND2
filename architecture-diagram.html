@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Neural Snippets – Dropout Predictor AI | SIH 2026 Architecture</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Inter', sans-serif;
+    background: #1a1f2e;
+    display: flex; flex-direction: column; align-items: center;
+    min-height: 100vh; padding: 20px; gap: 16px;
+  }
+  .toolbar {
+    display: flex; gap: 10px; background: #252b3b;
+    border: 1px solid #334; padding: 10px 16px; border-radius: 10px;
+    width: 100%; max-width: 1520px; align-items: center;
+  }
+  .toolbar h3 { color: #8ab4f8; font-size: 13px; font-weight: 600; flex: 1; }
+  .btn {
+    padding: 7px 16px; border-radius: 6px; border: none; cursor: pointer;
+    font-size: 12px; font-weight: 600; font-family: 'Inter', sans-serif;
+    transition: all .15s; display: flex; align-items: center; gap: 6px;
+  }
+  .btn-blue { background: #1a73e8; color: #fff; }
+  .btn-blue:hover { background: #1558c0; }
+  .btn-orange { background: #e86e1a; color: #fff; }
+  .btn-orange:hover { background: #c45a12; }
+  .btn-green { background: #1e8c4a; color: #fff; }
+  .btn-green:hover { background: #166038; }
+  #diagram-wrapper {
+    width: 1520px; background: #ffffff; border-radius: 12px;
+    overflow: hidden; box-shadow: 0 8px 48px rgba(0,0,0,0.5);
+  }
+  #diagram {
+    width: 1520px; min-height: 855px; background: #f8f9fb;
+    display: grid;
+    grid-template-columns: 150px 1fr 158px;
+    grid-template-rows: 54px 1fr 172px 22px;
+    font-family: 'Inter', sans-serif;
+  }
+  /* HEADER */
+  .header-bar {
+    grid-column: 1/-1; grid-row: 1;
+    background: linear-gradient(135deg, #0d1b3e 0%, #1a3a6e 100%);
+    display: flex; align-items: center; padding: 0 18px; gap: 14px;
+  }
+  .header-logo {
+    font-size: 11px; font-weight: 800; color: #fff; letter-spacing: 0.5px;
+    background: #1a73e8; padding: 4px 9px; border-radius: 5px; white-space: nowrap;
+  }
+  .header-title {
+    flex: 1; text-align: center; font-size: 22px; font-weight: 800;
+    color: #ffffff; letter-spacing: 3px; text-transform: uppercase;
+  }
+  .header-badge {
+    font-size: 10px; font-weight: 700; color: #fff; text-align: right;
+    background: #e86e1a; padding: 4px 10px; border-radius: 5px;
+    line-height: 1.4; white-space: nowrap;
+  }
+  /* PANELS */
+  .panel-users {
+    grid-column: 1; grid-row: 2;
+    background: #fff; border-right: 2px solid #e2e8f0;
+    padding: 8px 6px; display: flex; flex-direction: column; gap: 7px; overflow: hidden;
+  }
+  .panel-tech {
+    grid-column: 3; grid-row: 2;
+    background: #fff; border-left: 2px solid #e2e8f0;
+    padding: 8px 6px; display: flex; flex-direction: column; gap: 6px; overflow: hidden;
+  }
+  .panel-label {
+    font-size: 9px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase;
+    color: #fff; background: #0d1b3e; border-radius: 4px;
+    padding: 3px 6px; text-align: center; margin-bottom: 2px;
+  }
+  /* MAIN CONTENT */
+  .main-content {
+    grid-column: 2; grid-row: 2;
+    padding: 7px 7px 4px 7px;
+    display: grid;
+    grid-template-columns: 174px 138px 1fr 1fr 1fr;
+    grid-template-rows: auto auto;
+    gap: 6px;
+  }
+  /* DB ROW */
+  .db-row {
+    grid-column: 1/-1; grid-row: 3;
+    background: #fff; border-top: 2px solid #e2e8f0;
+    padding: 8px 12px; display: flex; flex-direction: column; gap: 5px;
+  }
+  /* FOOTER */
+  .footer {
+    grid-column: 1/-1; grid-row: 4; background: #0d1b3e;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 9px; color: #8ab4f8; font-weight: 500;
+    letter-spacing: 1.5px; text-transform: uppercase;
+  }
+  /* CARDS */
+  .card { border-radius: 7px; border: 1.5px solid; padding: 6px 7px; }
+  .card-header {
+    font-size: 9px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase;
+    margin-bottom: 5px; display: flex; align-items: center; gap: 5px;
+  }
+  .card-header .num {
+    width: 16px; height: 16px; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 9px; font-weight: 800; color: #fff; flex-shrink: 0;
+  }
+  .theme-blue   { border-color: #1a73e8; background: #f0f6ff; }
+  .theme-blue   .card-header { color: #1a3a6e; }
+  .theme-purple { border-color: #7c3aed; background: #faf5ff; }
+  .theme-purple .card-header { color: #4c1d95; }
+  .theme-orange { border-color: #e86e1a; background: #fff8f3; }
+  .theme-orange .card-header { color: #92400e; }
+  .theme-green  { border-color: #059669; background: #f0fdf4; }
+  .theme-green  .card-header { color: #065f46; }
+  .theme-teal   { border-color: #0891b2; background: #f0fdff; }
+  .theme-teal   .card-header { color: #164e63; }
+  /* USER CARDS */
+  .user-card { border-radius: 6px; border: 1.5px solid; padding: 6px 7px; background: #fff; }
+  .user-card-title {
+    font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.7px;
+    display: flex; align-items: center; gap: 4px; margin-bottom: 4px;
+  }
+  .user-icon { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; }
+  .user-bullet { font-size: 7.5px; color: #475569; line-height: 1.6; padding-left: 2px; }
+  .user-bullet li { list-style: none; }
+  .user-bullet li::before { content: "›"; margin-right: 3px; color: #94a3b8; }
+  .uc-student { border-color: #1a73e8; }
+  .uc-student .user-card-title { color: #1a3a6e; }
+  .uc-student .user-icon { background: #dbeafe; color: #1a73e8; }
+  .uc-mentor { border-color: #7c3aed; }
+  .uc-mentor .user-card-title { color: #4c1d95; }
+  .uc-mentor .user-icon { background: #ede9fe; color: #7c3aed; }
+  .uc-admin { border-color: #dc2626; }
+  .uc-admin .user-card-title { color: #7f1d1d; }
+  .uc-admin .user-icon { background: #fee2e2; color: #dc2626; }
+  /* TECH */
+  .tech-section { margin-bottom: 4px; }
+  .tech-section-title {
+    font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px;
+    color: #0d1b3e; background: #e2e8f0; border-radius: 3px;
+    padding: 2px 5px; margin-bottom: 4px;
+  }
+  .tech-grid { display: flex; flex-wrap: wrap; gap: 3px; }
+  .tech-badge { font-size: 7.5px; font-weight: 600; padding: 2px 6px; border-radius: 4px; border: 1px solid; white-space: nowrap; }
+  .tb-blue   { background: #dbeafe; border-color: #93c5fd; color: #1e40af; }
+  .tb-purple { background: #ede9fe; border-color: #c4b5fd; color: #5b21b6; }
+  .tb-orange { background: #ffedd5; border-color: #fdba74; color: #9a3412; }
+  .tb-green  { background: #dcfce7; border-color: #86efac; color: #166534; }
+  .tb-teal   { background: #cffafe; border-color: #67e8f9; color: #155e75; }
+  /* SCREEN LIST */
+  .screen-item {
+    font-size: 7.5px; color: #1e40af; background: #dbeafe;
+    border-radius: 4px; padding: 2px 5px; margin-bottom: 2px;
+    display: flex; align-items: center; gap: 3px;
+  }
+  .screen-item::before { content: "▪"; color: #3b82f6; }
+  /* AUTH FLOW */
+  .auth-flow { display: flex; flex-direction: column; gap: 2px; }
+  .auth-step {
+    background: #fff; border: 1.5px solid #7c3aed; border-radius: 5px;
+    padding: 3px 7px; font-size: 8px; font-weight: 600; color: #4c1d95; text-align: center;
+  }
+  .flow-arrow-v { display: flex; justify-content: center; color: #94a3b8; font-size: 13px; line-height: 1; }
+  /* API */
+  .api-group { border: 1.5px solid #e2e8f0; border-radius: 5px; overflow: hidden; }
+  .api-col-title { font-size: 8px; font-weight: 700; color: #fff; border-radius: 4px 4px 0 0; padding: 3px 5px; text-align: center; }
+  .api-endpoint { font-size: 7px; font-family: 'JetBrains Mono', monospace; color: #1e293b; padding: 1.5px 4px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .api-endpoint:last-child { border-bottom: none; }
+  /* PIPELINE */
+  .pipeline { display: flex; align-items: center; gap: 3px; }
+  .pipe-box {
+    background: #fff; border: 1.5px solid; border-radius: 5px;
+    padding: 4px 6px; text-align: center; flex-shrink: 0;
+    font-size: 7.5px; font-weight: 600; line-height: 1.3; min-width: 52px;
+  }
+  .pipe-arrow { font-size: 11px; color: #94a3b8; flex-shrink: 0; }
+  /* RISK */
+  .risk-band { display: flex; gap: 5px; margin-top: 4px; }
+  .risk-chip { flex: 1; border-radius: 5px; padding: 4px 3px; text-align: center; font-size: 7.5px; font-weight: 700; border: 1.5px solid; }
+  .risk-low    { background: #dcfce7; border-color: #86efac; color: #166534; }
+  .risk-medium { background: #fef9c3; border-color: #fde047; color: #854d0e; }
+  .risk-high   { background: #fee2e2; border-color: #fca5a5; color: #991b1b; }
+  /* GEMINI */
+  .lang-chip { font-size: 7.5px; font-weight: 700; padding: 2px 8px; border-radius: 4px; border: 1.5px solid; }
+  .lc-en { background: #dbeafe; border-color: #93c5fd; color: #1e40af; }
+  .lc-gu { background: #ffedd5; border-color: #fdba74; color: #9a3412; }
+  /* STATUS */
+  .status-chip { font-size: 7.5px; font-weight: 700; padding: 2px 7px; border-radius: 10px; border: 1.5px solid; }
+  .s-open     { background: #fff8e1; border-color: #fbbf24; color: #92400e; }
+  .s-progress { background: #dbeafe; border-color: #60a5fa; color: #1e40af; }
+  .s-resolved { background: #dcfce7; border-color: #4ade80; color: #166534; }
+  /* VAL */
+  .val-row { display: flex; align-items: center; gap: 6px; padding: 3px 6px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 5px; margin-top: 4px; }
+  .val-chip { font-size: 7.5px; font-weight: 600; color: #475569; padding: 1px 6px; background: #e2e8f0; border-radius: 3px; }
+  /* DB */
+  .db-label { font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px; color: #0d1b3e; margin-bottom: 5px; display: flex; align-items: center; gap: 6px; }
+  .db-tables { display: flex; gap: 5px; align-items: flex-end; flex-wrap: nowrap; overflow-x: auto; }
+  .db-table { border: 1.5px solid #1a73e8; border-radius: 5px; padding: 4px 7px; background: #f0f6ff; text-align: center; flex-shrink: 0; min-width: 70px; }
+  .db-table-name { font-size: 7.5px; font-weight: 700; color: #1a3a6e; font-family: 'JetBrains Mono', monospace; }
+  .db-table-label { font-size: 7px; color: #64748b; margin-top: 1px; }
+  .sec-badge { font-size: 7.5px; font-weight: 700; padding: 2px 7px; border-radius: 12px; border: 1.5px solid; display: flex; align-items: center; gap: 3px; }
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <h3>⚙ Neural Snippets – Dropout Predictor AI &nbsp;|&nbsp; SIH 2026 Architecture Diagram</h3>
+  <button class="btn btn-blue" onclick="exportSVG()">⬇ Export SVG</button>
+  <button class="btn btn-orange" onclick="exportPNG()">⬇ Export PNG (High-Res)</button>
+  <button class="btn btn-green" onclick="window.print()">🖨 Print / Save PDF</button>
+</div>
+
+<div id="diagram-wrapper">
+<div id="diagram">
+
+  <!-- HEADER -->
+  <div class="header-bar">
+    <div class="header-logo">Neural Snippets</div>
+    <div class="header-title">TECHNICAL APPROACH</div>
+    <div class="header-badge">SMART INDIA<br>HACKATHON 2026</div>
+  </div>
+
+  <!-- LEFT: USERS -->
+  <div class="panel-users">
+    <div class="panel-label">USERS / ROLES</div>
+    <div class="user-card uc-student">
+      <div class="user-card-title"><div class="user-icon">👨‍🎓</div>STUDENT</div>
+      <ul class="user-bullet">
+        <li>Login / Authentication</li>
+        <li>View own academic data</li>
+        <li>View dropout risk score</li>
+        <li>View AI reports</li>
+        <li>Track interventions</li>
+      </ul>
+    </div>
+    <div class="user-card uc-mentor">
+      <div class="user-card-title"><div class="user-icon">👨‍🏫</div>MENTOR / FACULTY</div>
+      <ul class="user-bullet">
+        <li>View assigned students</li>
+        <li>Attendance, marks, fees</li>
+        <li>View risk scores</li>
+        <li>Create intervention plans</li>
+        <li>Communicate with parents</li>
+      </ul>
+    </div>
+    <div class="user-card uc-admin">
+      <div class="user-card-title"><div class="user-icon">🛡️</div>ADMINISTRATOR</div>
+      <ul class="user-bullet">
+        <li>Manage students &amp; faculty</li>
+        <li>Upload CSV / Excel data</li>
+        <li>Validate uploaded data</li>
+        <li>View analytics &amp; reports</li>
+        <li>Monitor risk engine</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <div class="main-content">
+
+    <!-- 1. React Frontend -->
+    <div class="card theme-blue" style="grid-column:1;grid-row:1;">
+      <div class="card-header">
+        <span class="num" style="background:#1a73e8;">1</span>
+        REACT FRONTEND – VITE SPA
+      </div>
+      <div style="display:flex;gap:3px;flex-wrap:wrap;margin-bottom:5px;">
+        <span class="tech-badge tb-blue">React</span>
+        <span class="tech-badge tb-blue">Vite</span>
+        <span class="tech-badge tb-blue">TypeScript</span>
+        <span class="tech-badge tb-blue">Tailwind</span>
+        <span class="tech-badge tb-blue">Recharts</span>
+        <span class="tech-badge tb-blue">Lucide</span>
+      </div>
+      <div style="font-size:8px;font-weight:700;color:#1a3a6e;margin-bottom:3px;">FRONTEND SCREENS</div>
+      <div class="screen-item">Login / Signup</div>
+      <div class="screen-item">Student Dashboard</div>
+      <div class="screen-item">Mentor Dashboard</div>
+      <div class="screen-item">Student 360° Profile</div>
+      <div class="screen-item">Risk Dashboard</div>
+      <div class="screen-item">Intervention Plans</div>
+      <div class="screen-item">Admin Dashboard</div>
+      <div class="screen-item">Data Upload Center</div>
+      <div class="screen-item">Analytics / Insights</div>
+    </div>
+
+    <!-- 2. Auth -->
+    <div class="card theme-purple" style="grid-column:2;grid-row:1;">
+      <div class="card-header">
+        <span class="num" style="background:#7c3aed;">2</span>
+        AUTH &amp; AUTHZ
+      </div>
+      <div class="auth-flow">
+        <div class="auth-step">🔐 Supabase Auth</div>
+        <div class="flow-arrow-v">↓</div>
+        <div class="auth-step">🔑 JWT Token</div>
+        <div class="flow-arrow-v">↓</div>
+        <div class="auth-step">📡 JWT Session</div>
+        <div class="flow-arrow-v">↓</div>
+        <div class="auth-step">⚡ FastAPI Validation</div>
+        <div class="flow-arrow-v">↓</div>
+        <div class="auth-step" style="border-color:#0891b2;color:#0e4f6b;background:#f0fdff;">🛡 RBAC + RLS</div>
+      </div>
+      <div style="margin-top:5px;font-size:7.5px;font-weight:700;color:#4c1d95;margin-bottom:2px;">ROLES</div>
+      <div style="font-size:7px;color:#334155;line-height:1.65;">
+        <div>👨‍🎓 Student → Own Data Only</div>
+        <div>👨‍🏫 Mentor → Assigned Students</div>
+        <div>🛡️ Admin → Institution-wide</div>
+        <div style="color:#dc2626;">⛔ Unauthorized → Access Denied</div>
+      </div>
+    </div>
+
+    <!-- 3. FastAPI Backend -->
+    <div class="card theme-purple" style="grid-column:3/6;grid-row:1;">
+      <div class="card-header">
+        <span class="num" style="background:#7c3aed;">3</span>
+        FASTAPI BACKEND – PYTHON REST API
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:5px;">
+        <div class="api-group">
+          <div class="api-col-title" style="background:#1a73e8;">🔐 Auth API</div>
+          <div class="api-endpoint">/auth/validate-signup</div>
+          <div class="api-endpoint">/auth/me</div>
+        </div>
+        <div class="api-group">
+          <div class="api-col-title" style="background:#0891b2;">👤 Student API</div>
+          <div class="api-endpoint">/students/me</div>
+          <div class="api-endpoint">/students/{id}</div>
+          <div class="api-endpoint">/attendance</div>
+          <div class="api-endpoint">/marks</div>
+          <div class="api-endpoint">/fees</div>
+          <div class="api-endpoint">/feedback</div>
+          <div class="api-endpoint">/risk</div>
+          <div class="api-endpoint">/reports</div>
+        </div>
+        <div class="api-group">
+          <div class="api-col-title" style="background:#7c3aed;">📋 Mentor API</div>
+          <div class="api-endpoint">/mentor/class-summary</div>
+          <div class="api-endpoint">/mentor/roster</div>
+          <div class="api-endpoint">/mentor/student-detail</div>
+          <div class="api-col-title" style="background:#dc2626;margin-top:3px;">🛡 Admin API</div>
+          <div class="api-endpoint">/admin/students</div>
+          <div class="api-endpoint">/admin/insights</div>
+          <div class="api-endpoint">/admin/audit-log</div>
+          <div class="api-endpoint">/admin/risk-engine</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px;">
+          <div class="api-group">
+            <div class="api-col-title" style="background:#e86e1a;">📤 Upload API</div>
+            <div class="api-endpoint">CSV / Excel Upload</div>
+            <div class="api-endpoint">/upload/attendance</div>
+            <div class="api-endpoint">/upload/marks</div>
+            <div class="api-endpoint">/upload/fees</div>
+          </div>
+          <div class="api-group">
+            <div class="api-col-title" style="background:#059669;">📊 Risk API</div>
+            <div class="api-endpoint">/risk/compute</div>
+            <div class="api-endpoint">/risk/last-run</div>
+          </div>
+          <div class="api-group">
+            <div class="api-col-title" style="background:#0d9488;">📝 Report API</div>
+            <div class="api-endpoint">AI Diagnostic Report</div>
+            <div class="api-endpoint">English / Gujarati</div>
+          </div>
+          <div class="api-group">
+            <div class="api-col-title" style="background:#1e8c4a;">🎯 Intervention API</div>
+            <div class="api-endpoint">Create Intervention</div>
+            <div class="api-endpoint">Update Plan / Steps</div>
+          </div>
+        </div>
+      </div>
+      <div class="val-row">
+        <span style="font-size:8px;font-weight:700;color:#475569;">⚙ Validation:</span>
+        <span class="val-chip">Pydantic Schemas</span>
+        <span class="val-chip">Enrollment Validation</span>
+        <span class="val-chip">Error Handling</span>
+        <span class="val-chip">Background Workers</span>
+      </div>
+    </div>
+
+    <!-- 4. Data Ingestion -->
+    <div class="card theme-orange" style="grid-column:1/3;grid-row:2;">
+      <div class="card-header">
+        <span class="num" style="background:#e86e1a;">4</span>
+        DATA INGESTION PIPELINE
+      </div>
+      <div style="font-size:7.5px;color:#334155;margin-bottom:5px;">CSV / Excel files → validated database records</div>
+      <div class="pipeline">
+        <div class="pipe-box" style="border-color:#e86e1a;background:#fff8f3;">📄 CSV /<br>Excel Files</div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-box" style="border-color:#e86e1a;background:#fff8f3;">🐼 Pandas<br>Parser</div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-box" style="border-color:#e86e1a;background:#fff8f3;">🗺 Column<br>Mapping</div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-box" style="border-color:#e86e1a;background:#fff8f3;">✅ Data<br>Validation</div>
+        <div class="pipe-arrow">→</div>
+        <div class="pipe-box" style="border-color:#059669;background:#f0fdf4;">🗄 Supabase<br>PostgreSQL</div>
+      </div>
+      <div style="margin-top:6px;font-size:8px;font-weight:700;color:#92400e;margin-bottom:3px;">DATA TYPES INGESTED:</div>
+      <div style="display:flex;gap:5px;">
+        <span class="tech-badge tb-orange">📅 Attendance</span>
+        <span class="tech-badge tb-orange">📝 Marks</span>
+        <span class="tech-badge tb-orange">💰 Fees</span>
+        <span class="tech-badge tb-orange">💬 Feedback</span>
+      </div>
+    </div>
+
+    <!-- 5. Risk Engine -->
+    <div class="card theme-orange" style="grid-column:3;grid-row:2;">
+      <div class="card-header">
+        <span class="num" style="background:#e86e1a;">5</span>
+        DROPOUT RISK ENGINE
+      </div>
+      <div class="pipe-box" style="border-color:#0891b2;background:#f0fdff;width:100%;text-align:left;margin-bottom:3px;">📊 Student Data Aggregator</div>
+      <div style="display:flex;gap:3px;margin-bottom:3px;">
+        <div class="pipe-box" style="border-color:#e86e1a;background:#fff8f3;flex:1;font-size:7px;">📅 Attendance</div>
+        <div class="pipe-box" style="border-color:#e86e1a;background:#fff8f3;flex:1;font-size:7px;">📝 Marks</div>
+        <div class="pipe-box" style="border-color:#e86e1a;background:#fff8f3;flex:1;font-size:7px;">💰 Fees</div>
+      </div>
+      <div style="display:flex;gap:3px;margin-bottom:3px;">
+        <div class="pipe-box" style="border-color:#e86e1a;background:#fff8f3;flex:1;font-size:7px;">💬 Feedback</div>
+        <div class="pipe-box" style="border-color:#e86e1a;background:#fff8f3;flex:1;font-size:7px;">📌 Other Factors</div>
+      </div>
+      <div style="text-align:center;font-size:11px;color:#94a3b8;margin:2px 0;">↓</div>
+      <div class="pipe-box" style="border-color:#7c3aed;background:#faf5ff;width:100%;text-align:left;margin-bottom:3px;">⚙ Feature Processing &amp; Weighted Scoring</div>
+      <div style="text-align:center;font-size:11px;color:#94a3b8;margin:2px 0;">↓</div>
+      <div class="pipe-box" style="border-color:#dc2626;background:#fff5f5;width:100%;text-align:left;font-weight:700;">📉 Risk Score (0–100)</div>
+      <div class="risk-band">
+        <div class="risk-chip risk-low">🟢 LOW<br>0–30</div>
+        <div class="risk-chip risk-medium">🟡 MED<br>31–70</div>
+        <div class="risk-chip risk-high">🔴 HIGH<br>71–100</div>
+      </div>
+    </div>
+
+    <!-- 6. AI Report Generator -->
+    <div class="card theme-teal" style="grid-column:4;grid-row:2;">
+      <div class="card-header">
+        <span class="num" style="background:#0891b2;">6</span>
+        AI REPORT GENERATOR
+      </div>
+      <div class="auth-flow">
+        <div class="auth-step" style="border-color:#0891b2;color:#0e4f6b;background:#f0fdff;">📋 Request Report</div>
+        <div class="flow-arrow-v">↓</div>
+        <div class="auth-step" style="border-color:#0891b2;color:#0e4f6b;background:#f0fdff;">📊 Fetch Student Metrics</div>
+        <div class="flow-arrow-v">↓</div>
+        <div class="auth-step" style="border-color:#0891b2;color:#0e4f6b;background:#f0fdff;">📝 Build Structured Prompt</div>
+        <div class="flow-arrow-v">↓</div>
+        <div class="auth-step" style="border-color:#1a73e8;color:#1a3a6e;background:#f0f6ff;font-weight:800;">🤖 Google Gemini API</div>
+        <div class="flow-arrow-v">↓</div>
+        <div class="auth-step" style="border-color:#0891b2;color:#0e4f6b;background:#f0fdff;">✏ Generate Diagnostic Report</div>
+        <div class="flow-arrow-v">↓</div>
+        <div class="auth-step" style="border-color:#0891b2;color:#0e4f6b;background:#f0fdff;">🌐 Select Language</div>
+      </div>
+      <div style="display:flex;gap:5px;align-items:center;margin-top:4px;">
+        <span class="lang-chip lc-en">🇬🇧 English</span>
+        <span style="font-size:9px;color:#94a3b8;">→</span>
+        <span class="lang-chip lc-gu">🇮🇳 Gujarati</span>
+      </div>
+      <div style="margin-top:5px;font-size:7.5px;font-weight:700;color:#0e4f6b;">📣 Empathetic Plain-Language Report</div>
+      <div style="font-size:7px;color:#475569;margin-top:2px;line-height:1.5;">Risk factors · Situation · Recommended actions</div>
+    </div>
+
+    <!-- 7. Intervention -->
+    <div class="card theme-green" style="grid-column:5;grid-row:2;">
+      <div class="card-header">
+        <span class="num" style="background:#059669;">7</span>
+        INTERVENTION &amp; ACTION PLAN
+      </div>
+      <div class="auth-step" style="border-color:#dc2626;color:#7f1d1d;background:#fff5f5;margin-bottom:3px;">🚨 High-Risk Student Detected</div>
+      <div style="text-align:center;font-size:11px;color:#94a3b8;margin:2px 0;">↓</div>
+      <div class="auth-step" style="border-color:#059669;color:#065f46;background:#f0fdf4;margin-bottom:5px;">✏ Create / Generate Action Plan</div>
+      <div style="font-size:8px;font-weight:700;color:#065f46;margin-bottom:3px;">PLAN STEPS:</div>
+      <div style="display:flex;flex-wrap:wrap;gap:3px;margin-bottom:5px;">
+        <span class="tech-badge tb-green" style="font-size:7px;">📚 Academic Support</span>
+        <span class="tech-badge tb-green" style="font-size:7px;">📅 Attendance Counseling</span>
+        <span class="tech-badge tb-green" style="font-size:7px;">💰 Fee / Financial Support</span>
+        <span class="tech-badge tb-green" style="font-size:7px;">👨‍👩‍👦 Parent Outreach</span>
+        <span class="tech-badge tb-green" style="font-size:7px;">🤝 Mentor Check-in</span>
+      </div>
+      <div style="font-size:8px;font-weight:700;color:#065f46;margin-bottom:3px;">STATUS FLOW:</div>
+      <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;">
+        <div class="status-chip s-open">OPEN</div>
+        <span style="color:#94a3b8;font-size:10px;">→</span>
+        <div class="status-chip s-progress">IN PROGRESS</div>
+        <span style="color:#94a3b8;font-size:10px;">→</span>
+        <div class="status-chip s-resolved">RESOLVED</div>
+      </div>
+      <div style="margin-top:5px;display:flex;gap:3px;flex-wrap:wrap;">
+        <div class="pipe-box" style="border-color:#059669;background:#f0fdf4;font-size:7px;">📋 Interventions</div>
+        <div class="pipe-box" style="border-color:#059669;background:#f0fdf4;font-size:7px;">📄 Plans</div>
+        <div class="pipe-box" style="border-color:#059669;background:#f0fdf4;font-size:7px;">📌 Plan Steps</div>
+        <div class="pipe-box" style="border-color:#059669;background:#f0fdf4;font-size:7px;">📊 Risk Scores</div>
+      </div>
+    </div>
+
+  </div><!-- main-content -->
+
+  <!-- RIGHT: TECH STACK -->
+  <div class="panel-tech">
+    <div class="panel-label">TECHNOLOGY STACK</div>
+    <div class="tech-section">
+      <div class="tech-section-title">🖥 FRONTEND</div>
+      <div class="tech-grid">
+        <span class="tech-badge tb-blue">React</span>
+        <span class="tech-badge tb-blue">Vite</span>
+        <span class="tech-badge tb-blue">TypeScript</span>
+        <span class="tech-badge tb-blue">Tailwind CSS</span>
+        <span class="tech-badge tb-blue">Recharts</span>
+        <span class="tech-badge tb-blue">Lucide React</span>
+      </div>
+    </div>
+    <div class="tech-section">
+      <div class="tech-section-title">⚡ BACKEND</div>
+      <div class="tech-grid">
+        <span class="tech-badge tb-purple">FastAPI</span>
+        <span class="tech-badge tb-purple">Python</span>
+        <span class="tech-badge tb-purple">Pandas</span>
+        <span class="tech-badge tb-purple">REST API</span>
+        <span class="tech-badge tb-purple">Bg Workers</span>
+      </div>
+    </div>
+    <div class="tech-section">
+      <div class="tech-section-title">🗄 DATABASE &amp; SECURITY</div>
+      <div class="tech-grid">
+        <span class="tech-badge tb-teal">Supabase</span>
+        <span class="tech-badge tb-teal">PostgreSQL</span>
+        <span class="tech-badge tb-teal">JWT</span>
+        <span class="tech-badge tb-teal">Row-Level Security</span>
+        <span class="tech-badge tb-teal">RBAC</span>
+        <span class="tech-badge tb-teal">Audit Logs</span>
+      </div>
+    </div>
+    <div class="tech-section">
+      <div class="tech-section-title">🤖 AI &amp; INTEGRATION</div>
+      <div class="tech-grid">
+        <span class="tech-badge tb-orange">Google Gemini API</span>
+        <span class="tech-badge tb-orange">Multilingual Gen</span>
+        <span class="tech-badge tb-orange">JSON Schema</span>
+        <span class="tech-badge tb-orange">MD5 Caching</span>
+      </div>
+    </div>
+    <div style="border:1.5px solid #e2e8f0;border-radius:6px;padding:5px;background:#fff;">
+      <div style="font-size:8px;font-weight:700;color:#0d1b3e;margin-bottom:4px;">END-TO-END FLOW</div>
+      <div style="font-size:7.5px;color:#475569;line-height:1.75;">
+        👤 Users<br>↓ React Frontend<br>↓ Supabase Auth<br>↓ FastAPI Backend<br>↓ Data Ingestion<br>↓ Risk Engine<br>↓ Gemini AI Report<br>↓ Intervention Plan<br>↓ DB / Tracking
+      </div>
+    </div>
+  </div>
+
+  <!-- DATABASE ROW -->
+  <div class="db-row">
+    <div class="db-label">
+      <span style="font-size:16px;">⚡</span>
+      8. SUPABASE POSTGRESQL DATABASE
+      <span style="font-size:7.5px;color:#64748b;font-weight:500;">(Row-Level Security Enabled on All Tables)</span>
+    </div>
+    <div class="db-tables">
+      <div class="db-table"><div class="db-table-name">auth.users</div><div class="db-table-label">Auth (Users)</div></div>
+      <span style="color:#94a3b8;font-size:10px;align-self:center;">—</span>
+      <div class="db-table"><div class="db-table-name">users</div><div class="db-table-label">Profile</div></div>
+      <span style="color:#94a3b8;font-size:10px;align-self:center;">—</span>
+      <div class="db-table"><div class="db-table-name">students</div><div class="db-table-label">Student Info</div></div>
+      <span style="color:#94a3b8;font-size:10px;align-self:center;">—</span>
+      <div class="db-table"><div class="db-table-name">mentors</div><div class="db-table-label">Mentors Info</div></div>
+      <span style="color:#94a3b8;font-size:10px;align-self:center;">—</span>
+      <div class="db-table" style="border-color:#e86e1a;background:#fff8f3;"><div class="db-table-name" style="color:#92400e;">attendance</div><div class="db-table-label">Attendance</div></div>
+      <span style="color:#94a3b8;font-size:10px;align-self:center;">—</span>
+      <div class="db-table" style="border-color:#e86e1a;background:#fff8f3;"><div class="db-table-name" style="color:#92400e;">marks</div><div class="db-table-label">Marks</div></div>
+      <span style="color:#94a3b8;font-size:10px;align-self:center;">—</span>
+      <div class="db-table" style="border-color:#e86e1a;background:#fff8f3;"><div class="db-table-name" style="color:#92400e;">fees</div><div class="db-table-label">Fees</div></div>
+      <span style="color:#94a3b8;font-size:10px;align-self:center;">—</span>
+      <div class="db-table" style="border-color:#e86e1a;background:#fff8f3;"><div class="db-table-name" style="color:#92400e;">feedback</div><div class="db-table-label">Feedback</div></div>
+      <span style="color:#94a3b8;font-size:10px;align-self:center;">—</span>
+      <div class="db-table" style="border-color:#dc2626;background:#fff5f5;"><div class="db-table-name" style="color:#991b1b;">risk_scores</div><div class="db-table-label">Risk Scores</div></div>
+      <span style="color:#94a3b8;font-size:10px;align-self:center;">—</span>
+      <div class="db-table" style="border-color:#94a3b8;background:#f8fafc;"><div class="db-table-name" style="color:#475569;">risk_score_audit</div><div class="db-table-label">Audit Log</div></div>
+      <span style="color:#94a3b8;font-size:10px;align-self:center;">—</span>
+      <div class="db-table" style="border-color:#059669;background:#f0fdf4;"><div class="db-table-name" style="color:#065f46;">intervention_plans</div><div class="db-table-label">Plans</div></div>
+      <span style="color:#94a3b8;font-size:10px;align-self:center;">—</span>
+      <div class="db-table" style="border-color:#059669;background:#f0fdf4;"><div class="db-table-name" style="color:#065f46;">plan_steps</div><div class="db-table-label">Plan Steps</div></div>
+      <span style="color:#94a3b8;font-size:10px;align-self:center;">—</span>
+      <div class="db-table" style="border-color:#94a3b8;background:#f8fafc;"><div class="db-table-name" style="color:#475569;">upload_steps</div><div class="db-table-label">Upload Steps</div></div>
+
+      <div style="margin-left:auto;display:flex;flex-direction:column;gap:4px;justify-content:center;flex-shrink:0;">
+        <div style="display:flex;gap:4px;">
+          <span class="sec-badge" style="background:#dbeafe;border-color:#93c5fd;color:#1e40af;">🔑 JWT Auth</span>
+          <span class="sec-badge" style="background:#ede9fe;border-color:#c4b5fd;color:#5b21b6;">🛡 RBAC</span>
+        </div>
+        <div style="display:flex;gap:4px;">
+          <span class="sec-badge" style="background:#dcfce7;border-color:#86efac;color:#166534;">🔒 Row-Level Security</span>
+          <span class="sec-badge" style="background:#f1f5f9;border-color:#cbd5e1;color:#334155;">📋 Audit Logging</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer">Neural Snippets &nbsp;|&nbsp; Dropout Predictor AI &nbsp;|&nbsp; SIH 2026</div>
+
+</div>
+</div>
+
+<script>
+function exportSVG() {
+  const d = document.getElementById('diagram');
+  const w = d.scrollWidth, h = d.scrollHeight;
+  const svgStr = '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="' + w + '" height="' + h + '"><foreignObject width="' + w + '" height="' + h + '"><body xmlns="http://www.w3.org/1999/xhtml" style="margin:0;padding:0;">' + d.outerHTML + '</body></foreignObject></svg>';
+  const blob = new Blob([svgStr], {type:'image/svg+xml'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'neural-snippets-architecture.svg';
+  a.click();
+}
+
+function exportPNG() {
+  const d = document.getElementById('diagram');
+  const scale = 3;
+  const w = d.scrollWidth, h = d.scrollHeight;
+  const svgStr = '<svg xmlns="http://www.w3.org/2000/svg" width="' + (w*scale) + '" height="' + (h*scale) + '"><foreignObject width="' + w + '" height="' + h + '" transform="scale(' + scale + ')"><body xmlns="http://www.w3.org/1999/xhtml" style="margin:0;padding:0;font-family:Inter,sans-serif;">' + d.outerHTML + '</body></foreignObject></svg>';
+  const blob = new Blob([svgStr], {type:'image/svg+xml;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const img = new Image();
+  img.onload = function() {
+    const canvas = document.createElement('canvas');
+    canvas.width = w * scale; canvas.height = h * scale;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#f8f9fb'; ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.drawImage(img, 0, 0);
+    URL.revokeObjectURL(url);
+    canvas.toBlob(function(b2) {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(b2);
+      a.download = 'neural-snippets-architecture-3x.png';
+      a.click();
+    }, 'image/png');
+  };
+  img.onerror = function() { alert('Use SVG export or Print \u2192 Save as PDF for best results.'); URL.revokeObjectURL(url); };
+  img.src = url;
+}
+</script>
+</body>
+</html>

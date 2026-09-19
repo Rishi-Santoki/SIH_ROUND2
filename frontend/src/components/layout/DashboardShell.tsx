@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ShieldCheck, Bell, LogOut, Menu, X, User, Sparkles, Send, Check, CheckCircle2, MessageSquare, ExternalLink, AlertCircle } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import { ShieldCheck, Bell, LogOut, Menu, X, User, Sparkles, Send, Check, CheckCircle2, MessageSquare, ExternalLink, AlertCircle, Trash2, RotateCcw, Compass, BookOpen } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { ProofBadge } from '../ui/ProofBadge';
 import { apiClient } from '../../lib/api';
@@ -58,15 +59,34 @@ export function DashboardShell({
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [copilotOpen, setCopilotOpen] = useState(false);
   const [copilotQuery, setCopilotQuery] = useState('');
-  const [copilotMessages, setCopilotMessages] = useState<CopilotMessage[]>([
-    {
-      id: 'welcome',
-      sender: 'bot',
-      text: isIndustryRole
-        ? 'Hello! I am your ProofLedger Recruiter Copilot. Ask me about finding candidates with verified skills, talent pool analytics, or role match requirements.'
-        : 'Hello! I am your ProofLedger Career Copilot. Ask me about your skill gaps, target career paths, assessments, or application match scores.'
+
+  const defaultWelcomeText = isIndustryRole
+    ? 'Hello! I am your ProofLedger Recruiter Copilot. Ask me about finding candidates with verified skills, talent pool analytics, or role match requirements.'
+    : 'Hello! I am your ProofLedger AI Career Copilot. Ask me for a step-by-step roadmap for any skill, official NPTEL courses, or your current skill gaps.';
+
+  const defaultWelcomeMsg: CopilotMessage = {
+    id: 'welcome',
+    sender: 'bot',
+    text: defaultWelcomeText
+  };
+
+  const storageKey = `proofledger_copilot_${isIndustryRole ? 'industry' : 'student'}`;
+
+  // Initialize from localStorage for instant display
+  const [copilotMessages, setCopilotMessages] = useState<CopilotMessage[]>(() => {
+    try {
+      const cached = localStorage.getItem(storageKey);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+    } catch {
+      // fallback
     }
-  ]);
+    return [defaultWelcomeMsg];
+  });
 
   const [realUserName, setRealUserName] = useState<string>(defaultUserName);
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -80,6 +100,49 @@ export function DashboardShell({
     });
   }, []);
 
+  // 1. Fetch Chat History from Server
+  const { data: serverHistory = [], refetch: refetchChatHistory } = useQuery({
+    queryKey: ['copilot', 'history', isIndustryRole ? 'industry' : 'student'],
+    queryFn: async () => {
+      try {
+        const endpoint = isIndustryRole ? '/industry/copilot/history' : '/student/copilot/history';
+        const res = await apiClient.get<any[]>(endpoint);
+        return Array.isArray(res) ? res : [];
+      } catch {
+        return [];
+      }
+    },
+    staleTime: 1000 * 60 * 2 // 2 minutes
+  });
+
+  // Sync server history when fetched
+  useEffect(() => {
+    if (serverHistory && serverHistory.length > 0) {
+      const formatted: CopilotMessage[] = serverHistory.map((item: any, idx: number) => ({
+        id: item.message_id || `hist-${idx}-${item.created_at}`,
+        sender: (item.role === 'user' || item.is_bot === false) ? 'user' : 'bot',
+        text: item.message || ''
+      }));
+      setCopilotMessages(formatted);
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(formatted));
+      } catch {
+        // ignore
+      }
+    }
+  }, [serverHistory, storageKey]);
+
+  // Persist local copilotMessages to localStorage
+  useEffect(() => {
+    if (copilotMessages.length > 0) {
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(copilotMessages));
+      } catch {
+        // ignore
+      }
+    }
+  }, [copilotMessages, storageKey]);
+
   // Scroll copilot to bottom
   useEffect(() => {
     if (copilotOpen) {
@@ -87,7 +150,7 @@ export function DashboardShell({
     }
   }, [copilotMessages, copilotOpen]);
 
-  // 1. Fetch Notifications (Student or Industry role endpoint)
+  // 2. Fetch Notifications (Student or Industry role endpoint)
   const { data: notifications = [] } = useQuery({
     queryKey: [isIndustryRole ? 'industry' : 'student', 'notifications'],
     queryFn: async () => {
@@ -108,7 +171,7 @@ export function DashboardShell({
     refetchInterval: 15000 // Refresh notifications periodically
   });
 
-  // 2. Mark Notification Read Mutation
+  // 3. Mark Notification Read Mutation
   const markReadMutation = useApiMutation({
     mutationFn: async (notificationId: string) => {
       if (isIndustryRole) {
@@ -119,7 +182,7 @@ export function DashboardShell({
     invalidateQueries: [[isIndustryRole ? 'industry' : 'student', 'notifications']]
   });
 
-  // 3. Ask Copilot Mutation
+  // 4. Ask Copilot Mutation
   const askCopilotMutation = useApiMutation({
     mutationFn: async (queryText: string) => {
       if (isIndustryRole) {
@@ -136,6 +199,7 @@ export function DashboardShell({
         nextAction: data.next_action
       };
       setCopilotMessages(prev => [...prev, botResponse]);
+      refetchChatHistory();
     },
     onError: (err) => {
       setCopilotMessages(prev => [
@@ -149,6 +213,20 @@ export function DashboardShell({
     }
   });
 
+  // 5. Clear Copilot History Mutation
+  const clearHistoryMutation = useApiMutation({
+    mutationFn: async () => {
+      localStorage.removeItem(storageKey);
+      if (!isIndustryRole) {
+        return await apiClient.delete('/student/copilot/history');
+      }
+    },
+    onSuccess: () => {
+      setCopilotMessages([defaultWelcomeMsg]);
+      refetchChatHistory();
+    }
+  });
+
   const isNotificationUnread = (n: NotificationItem) => !(n.is_read || n.read_status);
   const unreadCount = notifications.filter(isNotificationUnread).length;
 
@@ -157,11 +235,11 @@ export function DashboardShell({
     navigate('/login');
   };
 
-  const handleSendCopilot = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!copilotQuery.trim() || askCopilotMutation.isPending) return;
+  const handleSendCopilot = (e?: React.FormEvent, customQuery?: string) => {
+    if (e) e.preventDefault();
+    const q = (typeof customQuery === 'string' ? customQuery : copilotQuery).trim();
+    if (!q || askCopilotMutation.isPending) return;
 
-    const q = copilotQuery.trim();
     setCopilotQuery('');
     setCopilotMessages(prev => [
       ...prev,
@@ -353,97 +431,194 @@ export function DashboardShell({
         {copilotOpen && (
           <>
             <div 
-              className="fixed inset-0 bg-ink/20 z-50 backdrop-blur-sm"
+              className="fixed inset-0 bg-ink/20 z-50 backdrop-blur-sm transition-opacity"
               onClick={() => setCopilotOpen(false)} 
             />
-            <div className="fixed inset-y-0 right-0 w-full max-w-md bg-white shadow-2xl z-50 border-l border-hairline flex flex-col animate-in slide-in-from-right">
+            <div className="fixed inset-y-0 right-0 w-full max-w-md sm:max-w-lg bg-white shadow-2xl z-50 border-l border-hairline flex flex-col animate-in slide-in-from-right duration-200">
               {/* Drawer Header */}
               <div className="p-4 border-b border-hairline bg-paper flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="h-8 w-8 rounded-full bg-verified-gold/20 flex items-center justify-center text-ink">
-                    <Sparkles className="h-4 w-4 text-ink" />
+                <div className="flex items-center gap-2.5">
+                  <div className="h-9 w-9 rounded-full bg-gradient-to-tr from-amber-500 to-indigo-600 p-0.5 flex items-center justify-center shadow-xs">
+                    <div className="h-full w-full bg-white rounded-full flex items-center justify-center">
+                      <Sparkles className="h-4 w-4 text-indigo-600" />
+                    </div>
                   </div>
                   <div>
-                    <h3 className="font-serif font-bold text-ink text-base">ProofLedger AI Copilot</h3>
-                    <p className="text-[10px] text-slate uppercase tracking-wider font-bold">Evidence-Grounded Assistant</p>
+                    <div className="flex items-center gap-1.5">
+                      <h3 className="font-serif font-bold text-ink text-base">ProofLedger AI Copilot</h3>
+                      <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse" title="Online" />
+                    </div>
+                    <p className="text-[10px] text-slate font-medium">NPTEL Govt. Courses & Skill Roadmap Mentor</p>
                   </div>
                 </div>
-                <button 
-                  onClick={() => setCopilotOpen(false)}
-                  className="p-1 text-slate hover:text-ink rounded-sm"
-                >
-                  <X className="h-5 w-5" />
-                </button>
+                
+                <div className="flex items-center gap-1">
+                  <button 
+                    type="button"
+                    onClick={() => {
+                      if (window.confirm("Clear all copilot conversation history?")) {
+                        clearHistoryMutation.mutate();
+                      }
+                    }}
+                    disabled={clearHistoryMutation.isPending || copilotMessages.length <= 1}
+                    className="p-1.5 text-slate hover:text-alert-rust rounded-sm transition-colors disabled:opacity-30"
+                    title="Clear chat history"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                  <button 
+                    onClick={() => setCopilotOpen(false)}
+                    className="p-1.5 text-slate hover:text-ink rounded-sm transition-colors ml-1"
+                    title="Close"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
               </div>
 
               {/* Chat Conversation Area */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate/5">
+              <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/50">
                 {copilotMessages.map((msg) => (
-                  <div 
-                    key={msg.id}
-                    className={cn(
-                      "flex flex-col",
-                      msg.sender === 'user' ? "items-end" : "items-start"
-                    )}
-                  >
-                    <div 
-                      className={cn(
-                        "max-w-[85%] rounded-sm p-3 text-sm leading-relaxed",
-                        msg.sender === 'user' 
-                          ? "bg-ink text-paper" 
-                          : "bg-white border border-hairline text-ink shadow-sm"
-                      )}
-                    >
-                      <p className="whitespace-pre-wrap">{msg.text}</p>
-                      
-                      {msg.sources && msg.sources.length > 0 && (
-                        <div className="mt-2 pt-2 border-t border-hairline text-[10px] text-slate">
-                          <span className="font-bold uppercase tracking-wider block mb-1">Sources & Grounding:</span>
-                          <ul className="list-disc list-inside space-y-0.5">
-                            {msg.sources.map((s, idx) => (
-                              <li key={idx}>{s}</li>
-                            ))}
-                          </ul>
+                  <div key={msg.id} className="w-full">
+                    {msg.sender === 'user' ? (
+                      <div className="flex items-start justify-end gap-2 max-w-[88%] ml-auto">
+                        <div className="bg-ink text-paper rounded-2xl rounded-tr-none px-4 py-2.5 text-sm leading-relaxed shadow-xs">
+                          <p className="whitespace-pre-wrap">{msg.text}</p>
                         </div>
-                      )}
+                        <div className="h-7 w-7 rounded-full bg-slate-900 text-white flex items-center justify-center text-xs font-bold shrink-0 mt-0.5 shadow-2xs">
+                          {realUserName ? realUserName[0].toUpperCase() : 'U'}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-start gap-2.5 max-w-[95%]">
+                        <div className="h-7 w-7 rounded-full bg-gradient-to-tr from-amber-500 to-indigo-600 text-white flex items-center justify-center shrink-0 mt-0.5 shadow-2xs">
+                          <Sparkles className="h-3.5 w-3.5" />
+                        </div>
+                        <div className="bg-white border border-slate-200/80 rounded-2xl rounded-tl-none p-4 shadow-xs text-ink flex-1 overflow-hidden">
+                          <div className="text-xs sm:text-sm text-ink leading-relaxed">
+                            <ReactMarkdown
+                              components={{
+                                h1: ({ node, ...props }) => <h1 className="text-base font-bold font-serif text-ink mt-3 mb-1.5 border-b border-hairline pb-1" {...props} />,
+                                h2: ({ node, ...props }) => <h2 className="text-sm font-bold font-serif text-ink mt-3 mb-1.5 text-blue-900" {...props} />,
+                                h3: ({ node, ...props }) => <h3 className="text-sm font-bold text-ink mt-2.5 mb-1 text-slate-900" {...props} />,
+                                h4: ({ node, ...props }) => <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mt-2 mb-1" {...props} />,
+                                p: ({ node, ...props }) => <p className="text-xs sm:text-sm leading-relaxed mb-2 text-ink/90" {...props} />,
+                                ul: ({ node, ...props }) => <ul className="space-y-1 mb-2.5 pl-4 list-disc marker:text-growth-teal text-xs sm:text-sm" {...props} />,
+                                ol: ({ node, ...props }) => <ol className="space-y-1 mb-2.5 pl-4 list-decimal marker:text-ink font-medium text-xs sm:text-sm" {...props} />,
+                                li: ({ node, ...props }) => <li className="leading-relaxed text-ink/90" {...props} />,
+                                strong: ({ node, ...props }) => <strong className="font-bold text-ink" {...props} />,
+                                hr: ({ node, ...props }) => <hr className="my-3 border-hairline" {...props} />,
+                                a: ({ node, href, children, ...props }) => (
+                                  <a 
+                                    href={href}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1 text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-200 hover:bg-blue-100 px-2 py-0.5 rounded-sm transition-colors my-0.5 underline underline-offset-2 break-all"
+                                    {...props}
+                                  >
+                                    <span>{children}</span>
+                                    <ExternalLink className="h-3 w-3 inline shrink-0" />
+                                  </a>
+                                ),
+                                blockquote: ({ node, ...props }) => (
+                                  <blockquote className="border-l-2 border-orange-500 bg-orange-50/60 pl-3 py-1.5 text-xs text-orange-900 rounded-r-sm my-2 font-medium" {...props} />
+                                ),
+                                code: ({ node, inline, ...props }: any) => inline 
+                                  ? <code className="bg-slate-100 text-ink px-1.5 py-0.5 rounded text-[11px] font-mono border border-slate-200" {...props} />
+                                  : <pre className="bg-slate-900 text-slate-100 p-2.5 rounded-sm overflow-x-auto text-[11px] font-mono my-2"><code {...props} /></pre>
+                              }}
+                            >
+                              {msg.text}
+                            </ReactMarkdown>
+                          </div>
 
-                      {msg.nextAction && (
-                        <div className="mt-2 text-[11px] font-bold text-growth-teal">
-                          Next action: {msg.nextAction}
+                          {msg.sources && msg.sources.length > 0 && (
+                            <div className="mt-3 pt-2.5 border-t border-hairline flex flex-wrap items-center gap-1.5">
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-slate shrink-0">Sources:</span>
+                              {msg.sources.map((s, idx) => (
+                                <span key={idx} className="inline-flex items-center text-[10px] bg-slate/10 text-slate px-2 py-0.5 rounded-sm font-medium">
+                                  {s}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+
+                          {msg.nextAction && (
+                            <div className="mt-2.5 pt-2 border-t border-hairline/60 flex items-center justify-between gap-2 flex-wrap">
+                              <span className="text-[11px] font-semibold text-growth-teal flex items-center gap-1">
+                                <CheckCircle2 className="h-3 w-3 shrink-0" />
+                                Next: {msg.nextAction}
+                              </span>
+                              {isStudentRole && (
+                                <Link
+                                  to="/student/learning"
+                                  onClick={() => setCopilotOpen(false)}
+                                  className="text-[10px] font-bold text-ink underline hover:text-growth-teal shrink-0 flex items-center gap-0.5"
+                                >
+                                  <span>View Courses</span>
+                                  <ExternalLink className="h-2.5 w-2.5" />
+                                </Link>
+                              )}
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
+                      </div>
+                    )}
                   </div>
                 ))}
 
                 {askCopilotMutation.isPending && (
-                  <div className="flex items-start">
-                    <div className="bg-white border border-hairline rounded-sm p-3 text-xs text-slate shadow-sm flex items-center gap-2">
-                      <div className="h-3 w-3 rounded-full border border-ink border-t-transparent animate-spin" />
-                      Analyzing your evidence ledger & generating answer...
+                  <div className="flex items-start gap-2.5">
+                    <div className="h-7 w-7 rounded-full bg-gradient-to-tr from-amber-500 to-indigo-600 text-white flex items-center justify-center shrink-0 mt-0.5 shadow-2xs">
+                      <Sparkles className="h-3.5 w-3.5 animate-spin" />
+                    </div>
+                    <div className="bg-white border border-hairline rounded-2xl rounded-tl-none p-3.5 text-xs text-slate shadow-xs flex items-center gap-2">
+                      <div className="h-3.5 w-3.5 rounded-full border-2 border-indigo-600 border-t-transparent animate-spin" />
+                      <span>Generating step-by-step roadmap & finding NPTEL courses...</span>
                     </div>
                   </div>
                 )}
                 <div ref={chatEndRef} />
               </div>
 
+              {/* Quick Prompt Suggestion Chips */}
+              <div className="px-4 py-2 border-t border-hairline bg-paper/50 flex items-center gap-1.5 overflow-x-auto scrollbar-none">
+                {[
+                  { label: "🗺️ Python Roadmap", q: "Give me a complete roadmap for Python" },
+                  { label: "🧠 Deep Learning Path", q: "Give me a step by step roadmap for Deep Learning" },
+                  { label: "☁️ Cloud Computing", q: "Give me a roadmap for Cloud Computing" },
+                  { label: "📊 Missing Skill Gaps", q: "What are my missing skill gaps?" }
+                ].map((chip, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => handleSendCopilot(undefined, chip.q)}
+                    disabled={askCopilotMutation.isPending}
+                    className="shrink-0 text-[11px] font-medium bg-white hover:bg-slate-50 border border-hairline hover:border-ink/40 text-ink px-2.5 py-1 rounded-full shadow-2xs transition-all active:scale-95 disabled:opacity-50"
+                  >
+                    {chip.label}
+                  </button>
+                ))}
+              </div>
+
               {/* Input Footer */}
-              <div className="p-4 border-t border-hairline bg-white">
-                <form onSubmit={handleSendCopilot} className="flex items-center gap-2">
+              <div className="p-3.5 border-t border-hairline bg-white">
+                <form onSubmit={(e) => handleSendCopilot(e)} className="flex items-center gap-2">
                   <input
                     type="text"
                     value={copilotQuery}
                     onChange={(e) => setCopilotQuery(e.target.value)}
-                    placeholder="Ask about missing skills, roadmaps..."
+                    placeholder="Ask for a roadmap (e.g. 'Roadmap for Python')..."
                     disabled={askCopilotMutation.isPending}
-                    className="flex-1 bg-paper border border-hairline rounded-sm px-3.5 py-2.5 text-sm focus:outline-none focus:border-ink disabled:opacity-50"
+                    className="flex-1 bg-paper border border-hairline rounded-full px-4 py-2.5 text-xs sm:text-sm focus:outline-none focus:border-ink disabled:opacity-50"
                   />
                   <button
                     type="submit"
                     disabled={!copilotQuery.trim() || askCopilotMutation.isPending}
-                    className="bg-ink text-paper p-2.5 rounded-sm hover:bg-ink/90 disabled:opacity-50 transition-colors flex items-center justify-center"
+                    className="bg-ink text-paper h-9 w-9 rounded-full hover:bg-ink/90 disabled:opacity-50 transition-colors flex items-center justify-center shrink-0 shadow-xs"
+                    title="Send"
                   >
-                    <Send className="h-4 w-4" />
+                    <Send className="h-3.5 w-3.5" />
                   </button>
                 </form>
               </div>

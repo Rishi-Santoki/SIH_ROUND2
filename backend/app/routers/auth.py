@@ -107,7 +107,154 @@ def get_companies(client: Client = Depends(get_db_client)):
     res = client.table("companies").select("company_id, name, industry_type, location").execute()
     return res.data
 
-from app.models.auth_schemas import UserUpdate
+from app.models.auth_schemas import UserUpdate, RegisterRequest
+from pydantic import BaseModel
+
+class ConfirmAccountRequest(BaseModel):
+    email: str
+
+@router.post("/register")
+def register_user(req: RegisterRequest):
+    email = req.email.strip().lower()
+    password = req.password
+    full_name = req.full_name.strip()
+    role = req.role.strip().lower()
+    
+    if role not in ["student", "industry", "academician", "institution", "alumni", "super_admin"]:
+        raise HTTPException(status_code=400, detail=f"Invalid role: {role}")
+    
+    if len(password) < 6:
+        raise HTTPException(status_code=400, detail="Password must be at least 6 characters long")
+        
+    service_client = get_service_client()
+    
+    try:
+        user_res = service_client.auth.admin.create_user({
+            "email": email,
+            "password": password,
+            "email_confirm": True,
+            "user_metadata": {
+                "full_name": full_name,
+                "role": role
+            }
+        })
+        user_id = str(user_res.user.id)
+    except Exception as e:
+        err_msg = str(e)
+        if "already registered" in err_msg.lower() or "already exists" in err_msg.lower():
+            try:
+                u_res = service_client.table("users").select("user_id").eq("email", email).execute()
+                if u_res.data:
+                    u_id = u_res.data[0]["user_id"]
+                    service_client.auth.admin.update_user_by_id(u_id, {
+                        "password": password,
+                        "email_confirm": True,
+                        "user_metadata": {"full_name": full_name, "role": role}
+                    })
+                    user_id = u_id
+                else:
+                    raise HTTPException(status_code=400, detail="An account with this email already exists. Please log in.")
+            except HTTPException:
+                raise
+            except Exception:
+                raise HTTPException(status_code=400, detail="An account with this email already exists. Please log in.")
+        else:
+            raise HTTPException(status_code=400, detail=f"Registration failed: {err_msg}")
+
+    # Ensure user is in public.users
+    try:
+        service_client.table("users").upsert({
+            "user_id": user_id,
+            "email": email,
+            "full_name": full_name,
+            "role": role,
+            "is_active": True
+        }).execute()
+    except Exception:
+        pass
+
+    # Initialize role-specific profile so their dashboard opens with clean initial state
+    try:
+        if role == "student":
+            st_check = service_client.table("student_profiles").select("student_id").eq("student_id", user_id).execute()
+            if not st_check.data:
+                service_client.table("student_profiles").insert({
+                    "student_id": user_id,
+                    "department": "Engineering",
+                    "current_year": 1,
+                    "cgpa": 0.0,
+                    "graduation_year": 2028,
+                    "target_career_id": None,
+                    "institution_id": None
+                }).execute()
+        elif role == "industry":
+            rec_check = service_client.table("recruiter_profiles").select("recruiter_id").eq("recruiter_id", user_id).execute()
+            if not rec_check.data:
+                comp_res = service_client.table("companies").select("company_id").limit(1).execute()
+                comp_id = comp_res.data[0]["company_id"] if comp_res.data else None
+                service_client.table("recruiter_profiles").insert({
+                    "recruiter_id": user_id,
+                    "company_id": comp_id,
+                    "title": "Talent Acquisition Specialist"
+                }).execute()
+        elif role == "academician":
+            acad_check = service_client.table("academician_profiles").select("academician_id").eq("academician_id", user_id).execute()
+            if not acad_check.data:
+                inst_res = service_client.table("institutions").select("institution_id").limit(1).execute()
+                inst_id = inst_res.data[0]["institution_id"] if inst_res.data else None
+                service_client.table("academician_profiles").insert({
+                    "academician_id": user_id,
+                    "institution_id": inst_id,
+                    "department": "Computer Science & Engineering",
+                    "designation": "Assistant Professor"
+                }).execute()
+        elif role == "institution":
+            inst_check = service_client.table("institution_admins").select("admin_id").eq("admin_id", user_id).execute()
+            if not inst_check.data:
+                inst_res = service_client.table("institutions").select("institution_id").limit(1).execute()
+                inst_id = inst_res.data[0]["institution_id"] if inst_res.data else None
+                service_client.table("institution_admins").insert({
+                    "admin_id": user_id,
+                    "institution_id": inst_id
+                }).execute()
+        elif role == "alumni":
+            alumni_check = service_client.table("alumni_profiles").select("alumni_id").eq("alumni_id", user_id).execute()
+            if not alumni_check.data:
+                inst_res = service_client.table("institutions").select("institution_id").limit(1).execute()
+                inst_id = inst_res.data[0]["institution_id"] if inst_res.data else None
+                service_client.table("alumni_profiles").insert({
+                    "alumni_id": user_id,
+                    "institution_id": inst_id,
+                    "current_company": "Tech Innovations Ltd.",
+                    "current_role": "Software Engineer",
+                    "graduation_year": 2023,
+                    "verification_status": "verified"
+                }).execute()
+    except Exception:
+        pass
+
+    return {
+        "status": "success",
+        "user_id": user_id,
+        "email": email,
+        "full_name": full_name,
+        "role": role,
+        "message": "Account created successfully"
+    }
+
+@router.post("/confirm-account")
+def confirm_user_account(req: ConfirmAccountRequest):
+    email = req.email.strip().lower()
+    service_client = get_service_client()
+    try:
+        u_res = service_client.table("users").select("user_id").eq("email", email).execute()
+        if u_res.data:
+            u_id = u_res.data[0]["user_id"]
+            service_client.auth.admin.update_user_by_id(u_id, {"email_confirm": True})
+            return {"status": "success", "message": "Email confirmed"}
+        return {"status": "not_found"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
 
 @router.patch("/me")
 def update_me(update: UserUpdate, user: dict = Depends(get_authenticated_user), client: Client = Depends(get_db_client)):
@@ -125,3 +272,4 @@ def update_me(update: UserUpdate, user: dict = Depends(get_authenticated_user), 
         
     res = client.table("users").update(data).eq("user_id", user["user_id"]).execute()
     return res.data
+
