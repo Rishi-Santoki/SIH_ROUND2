@@ -1,6 +1,6 @@
-import React, { useState, useRef } from 'react';
+import { useState, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Plus, Upload, FolderGit2, ShieldCheck, Link as LinkIcon, FileText, CheckCircle2, AlertCircle, Loader2, Image as ImageIcon } from 'lucide-react';
+import { Plus, Upload, FolderGit2, Link as LinkIcon, FileText, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 import { ProofBadge } from '../../components/ui/ProofBadge';
 import { apiClient } from '../../lib/api';
 import { useApiMutation } from '../../hooks/useApiMutation';

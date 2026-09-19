@@ -1,9 +1,6 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Briefcase, Building, MapPin, ExternalLink, ChevronDown, ChevronUp, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
-import { cn } from '../../lib/utils';
-import { ProofBadge } from '../../components/ui/ProofBadge';
-import { EvidenceChip } from '../../components/ui/EvidenceChip';
+import { Building, MapPin, ChevronDown, ChevronUp, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { MatchScoreVisualizer } from '../../components/ui/MatchScoreVisualizer';
 import { apiClient } from '../../lib/api';
 import { useApiMutation } from '../../hooks/useApiMutation';
@@ -66,7 +63,7 @@ export function StudentOpportunities() {
   const [errorMap, setErrorMap] = useState<Record<string, string>>({});
 
   // Query recommended opportunities from backend
-  const { data: recData, isLoading: recLoading } = useQuery({
+  const { data: recData } = useQuery({
     queryKey: ['student', 'opportunities', 'recommended'],
     queryFn: () => apiClient<{ weights_version?: number; matches?: any[] }>('/student/opportunities/recommended'),
     retry: 1,

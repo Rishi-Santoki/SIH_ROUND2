@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { BookOpen, ExternalLink, ShieldAlert, Check, Plus, ArrowUpRight, CheckCircle2 } from 'lucide-react';
+import { ExternalLink, Check, Plus, CheckCircle2 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Link } from 'react-router-dom';
 import { apiClient } from '../../lib/api';
@@ -59,7 +59,7 @@ export function StudentLearning() {
       });
     },
     invalidateQueries: [['student', 'learning-progress']],
-    onSuccess: (data, vars) => {
+    onSuccess: (_, vars) => {
       if (vars.status === 'completed' || vars.progress >= 100) {
         setShowInterstitial('Course Competencies');
       }

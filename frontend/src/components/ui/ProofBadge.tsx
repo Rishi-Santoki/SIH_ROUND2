@@ -7,9 +7,12 @@ interface ProofBadgeProps {
   className?: string;
   showLabel?: boolean;
   label?: string;
+  text?: string;
+  size?: 'sm' | 'md' | 'lg' | string;
 }
 
-export function ProofBadge({ status, className, showLabel = false, label }: ProofBadgeProps) {
+export function ProofBadge({ status, className, showLabel = false, label, text, size }: ProofBadgeProps) {
+  const displayLabel = label || text;
   const isVerified = status === 'verified';
   const isPending = status === 'pending';
 
@@ -19,7 +22,7 @@ export function ProofBadge({ status, className, showLabel = false, label }: Proo
         <div className="flex h-5 w-5 items-center justify-center rounded-full bg-verified-gold text-paper shadow-sm">
           <CheckCircle2 className="h-3.5 w-3.5" strokeWidth={3} />
         </div>
-        {(label || showLabel) && <span className="text-sm font-medium text-ink">{label || "Verified"}</span>}
+        {(displayLabel || showLabel) && <span className="text-sm font-medium text-ink">{displayLabel || "Verified"}</span>}
       </div>
     );
   }
@@ -30,7 +33,7 @@ export function ProofBadge({ status, className, showLabel = false, label }: Proo
         <div className="flex h-5 w-5 items-center justify-center rounded-full border border-slate/40 text-slate">
           <Clock className="h-3.5 w-3.5" strokeWidth={2} />
         </div>
-        {(label || showLabel) && <span className="text-sm font-medium text-slate">{label || "Verification Pending"}</span>}
+        {(displayLabel || showLabel) && <span className="text-sm font-medium text-slate">{displayLabel || "Verification Pending"}</span>}
       </div>
     );
   }
@@ -38,7 +41,7 @@ export function ProofBadge({ status, className, showLabel = false, label }: Proo
   return (
     <div className={cn("inline-flex items-center gap-1.5", className)}>
       <div className="rounded-sm border border-dashed border-slate/30 bg-slate/5 px-2 py-0.5 text-xs font-medium text-slate">
-        {label || "Self-Declared"}
+        {displayLabel || "Self-Declared"}
       </div>
     </div>
   );

@@ -6,7 +6,7 @@ export type EvidenceType = 'assessment' | 'project' | 'certificate' | 'mentor';
 
 interface EvidenceChipProps {
   type: EvidenceType;
-  label: string;
+  label?: string;
   className?: string;
 }
 
@@ -38,7 +38,9 @@ const config = {
 };
 
 export function EvidenceChip({ type, label, className }: EvidenceChipProps) {
-  const { icon: Icon, color, bg, border } = config[type];
+  const cfg = config[type] || config.project;
+  const { icon: Icon, color, bg, border } = cfg;
+  const displayLabel = label ?? (type ? type.charAt(0).toUpperCase() + type.slice(1) : '');
   
   return (
     <div className={cn(
@@ -47,7 +49,7 @@ export function EvidenceChip({ type, label, className }: EvidenceChipProps) {
       className
     )}>
       <Icon className="h-3 w-3" />
-      <span>{label}</span>
+      {displayLabel && <span>{displayLabel}</span>}
     </div>
   );
 }
